@@ -1,0 +1,143 @@
+[gd_resource type="Resource" script_class="DialogueData" format=3 uid="uid://dok6qv8gtwo8u"]
+
+[ext_resource type="Script" uid="uid://eit47g61t72a" path="res://addons/dialogue_nodes/objects/DialogueData.gd" id="1_cvsfl"]
+
+[resource]
+script = ExtResource("1_cvsfl")
+starts = {
+"START1": &"0_1"
+}
+nodes = {
+&"0_1": {
+"link": &"3_1",
+"offset": Vector2(-220, 80),
+"size": Vector2(180.00018, 86.0004),
+"start_id": "START1"
+},
+&"1_1": {
+"dialogue": "복도 끝에 처음 보는 교실이 있다. 문패에는 ‘2학년 0반’이라고 적혀 있다.",
+"offset": Vector2(80, -140),
+"options": {
+0: {
+"condition": Array[Dictionary]([]),
+"link": &"3_6",
+"text": "조심스럽게 문을 연다"
+},
+1: {
+"condition": Array[Dictionary]([]),
+"link": &"1_3",
+"text": "일단 돌아간다"
+}
+},
+"size": Vector2(300.00085, 304.00012),
+"speaker": "상황"
+},
+&"1_2": {
+"dialogue": "문을 열자 낯선 학교 복도가 펼쳐진다. 들어온 문은 사라졌다.
+벽에는 안내문이 붙어 있다.
+‘방문객은 별관 계단을 이용하십시오.’
+그때 방송이 울린다. “모든 학생은 중앙 계단으로 이동하십시오.”",
+"offset": Vector2(500, -160),
+"options": {
+0: {
+"condition": Array[Dictionary]([]),
+"link": &"3_8",
+"text": "별관 계단으로 간다"
+},
+1: {
+"condition": Array[Dictionary]([]),
+"link": "END",
+"text": "중앙 계단으로 간다"
+}
+},
+"size": Vector2(300.00012, 299.9999),
+"speaker": "상황"
+},
+&"1_3": {
+"dialogue": "문에서 물러나 복도를 돌아 나왔다. 이번 탐사는 중단됐다.",
+"offset": Vector2(500, 160),
+"options": {
+0: {
+"condition": Array[Dictionary]([]),
+"link": "END",
+"text": ""
+}
+},
+"size": Vector2(300.00012, 240.00003),
+"speaker": "상황"
+},
+&"1_4": {
+"dialogue": "별관 계단 끝에 교무실이 보인다. 문 안쪽에서 종이를 넘기는 소리가 들린다",
+"offset": Vector2(920, -160),
+"options": {
+0: {
+"condition": Array[Dictionary]([]),
+"link": "END",
+"text": "하나 "
+},
+1: {
+"condition": Array[Dictionary]([]),
+"link": "END",
+"text": "둘 "
+}
+},
+"size": Vector2(300.00085, 267),
+"speaker": "상황"
+},
+&"2_1": {
+"comment": "처음 교실 문을 발견",
+"offset": Vector2(520, -300),
+"size": Vector2(200.00037, 100)
+},
+&"2_2": {
+"comment": "계단을 고르는 장면",
+"offset": Vector2(920, -300),
+"size": Vector2(200.00058, 100)
+},
+&"3_1": {
+"link": &"3_2",
+"offset": Vector2(100, 220),
+"signalValue": "INSIGHT|CALM|관찰|문패와 손잡이의 상태가 서로 다르다. 누군가 최근에 이 문을 사용했을 가능성이 있다."
+},
+&"3_2": {
+"link": &"3_3",
+"offset": Vector2(100, 320),
+"signalValue": "INSIGHT|CAUTIOUS|관찰|문패에는 먼지가 쌓여 있는데 손잡이만 깨끗하다. 안쪽에 누군가 있을 가능성을 배제하기 어렵다."
+},
+&"3_3": {
+"link": &"3_4",
+"offset": Vector2(100, 420),
+"signalValue": "INSIGHT|CURIOUS|관찰|오랫동안 방치된 것처럼 보이는 문인데 손잡이만 이상할 정도로 깨끗하다. 누가, 왜 이 문만 만진 걸까?"
+},
+&"3_4": {
+"link": &"3_5",
+"offset": Vector2(100, 520),
+"signalValue": "INSIGHT|DIRECT|판단|손잡이에 먼지가 없다. 최근에 누군가 이 문을 열었다. 빈 교실처럼 보여도 그대로 믿을 수는 없다."
+},
+&"3_5": {
+"link": &"1_1",
+"offset": Vector2(100, 620),
+"signalValue": "INSIGHT|TIMID|감지|아무도 쓰지 않는 교실이라기엔 손잡이가 너무 깨끗하다. 이 문 너머에 뭔가 있는 것 같아 가까이 가고 싶지 않다."
+},
+&"3_6": {
+"link": &"3_7",
+"offset": Vector2(540, 440),
+"signalValue": "INSIGHT|CALM|관찰|차분함 "
+},
+&"3_7": {
+"link": &"1_2",
+"offset": Vector2(540, 520),
+"signalValue": "INSIGHT|CAUTIOUS|관찰|관찰 "
+},
+&"3_8": {
+"link": &"3_9",
+"offset": Vector2(940, 140),
+"signalValue": "INSIGHT|CALM|관찰|차분함 "
+},
+&"3_9": {
+"link": &"1_4",
+"offset": Vector2(940, 220),
+"signalValue": "INSIGHT|CAUTIOUS|관찰|관찰 "
+}
+}
+strays = Array[String](["2_1", "2_2"])

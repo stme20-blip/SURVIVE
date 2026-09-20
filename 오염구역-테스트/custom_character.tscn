@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://dmpr3inp35qlo"]
+
+[ext_resource type="Script" uid="uid://b620pajelaaa4" path="res://custom_character.gd" id="1_4v3ft"]
+
+[node name="CustomCharacter" type="Control" unique_id=386896036]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_4v3ft")

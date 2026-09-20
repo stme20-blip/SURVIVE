@@ -1,0 +1,56 @@
+[gd_scene format=3 uid="uid://djcvohx6aidjw"]
+
+[ext_resource type="Script" uid="uid://dpcsys4doerso" path="res://main.gd" id="1_0pa6k"]
+[ext_resource type="PackedScene" uid="uid://dkdo8yr0whkcw" path="res://discussion_panel.tscn" id="2_vy4ec"]
+[ext_resource type="Texture2D" uid="uid://ceo5quqgsvp0y" path="res://school_hallway.png" id="3_sh83e"]
+[ext_resource type="Script" uid="uid://f2q7jqe5wou5" path="res://ScreenLayout.gd" id="4_to3ld"]
+[ext_resource type="Script" uid="uid://by8fmhpldj46a" path="res://addons/dialogue_nodes/objects/DialogueBox.gd" id="5_n73r6"]
+[ext_resource type="Resource" uid="uid://dok6qv8gtwo8u" path="res://school_test.tres" id="6_jrsjr"]
+[ext_resource type="Script" uid="uid://m31i3axecagx" path="res://addons/dialogue_nodes/objects/bbcodeWait.gd" id="7_gtpfc"]
+[ext_resource type="Script" uid="uid://blmdt7v8bd0nl" path="res://addons/dialogue_nodes/objects/bbcodeGhost.gd" id="8_jb54w"]
+[ext_resource type="Script" uid="uid://bsoctnc26xumr" path="res://addons/dialogue_nodes/objects/bbcodeMatrix.gd" id="9_nwx8h"]
+
+[sub_resource type="RichTextEffect" id="RichTextEffect_efxa6"]
+script = ExtResource("7_gtpfc")
+
+[sub_resource type="RichTextEffect" id="RichTextEffect_dg77c"]
+script = ExtResource("8_jb54w")
+
+[sub_resource type="RichTextEffect" id="RichTextEffect_ycdy4"]
+script = ExtResource("9_nwx8h")
+
+[node name="Control" type="Control" unique_id=716022336]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_0pa6k")
+
+[node name="Control" parent="." unique_id=880170219 instance=ExtResource("2_vy4ec")]
+layout_mode = 1
+
+[node name="SchoolHallway_png" type="Sprite2D" parent="." unique_id=2793783]
+position = Vector2(576, 325.75)
+scale = Vector2(0.6925837, 0.6912859)
+texture = ExtResource("3_sh83e")
+script = ExtResource("4_to3ld")
+
+[node name="DialogueBox" type="Panel" parent="." unique_id=1208437397]
+visible = false
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("5_n73r6")
+data = ExtResource("6_jrsjr")
+custom_effects = Array[RichTextEffect]([SubResource("RichTextEffect_efxa6"), SubResource("RichTextEffect_dg77c"), SubResource("RichTextEffect_ycdy4")])
+options_alignment = 0
+options_vertical = true
+metadata/_custom_type_script = "uid://by8fmhpldj46a"
+
+[node name="Background" type="TextureRect" parent="." unique_id=1726746758]
+layout_mode = 0
+offset_right = 292.0
+offset_bottom = 160.0

@@ -1,0 +1,45 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="오염구역_테스트"
+run/main_scene="uid://bvmk0k7hov8rd"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+
+GameData="*uid://bvuhetv1yo2m5"
+RoomManager="*uid://dbcx5uqb5ni6h"
+ScreenLayout="*uid://f2q7jqe5wou5"
+
+[display]
+
+window/size/viewport_width=1536
+window/stretch/mode="canvas_items"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/dialogue_nodes/plugin.cfg")
+
+[gui]
+
+theme/custom_font="uid://boglh2ig6i7ih"
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+rendering_device/driver.windows="d3d12"
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

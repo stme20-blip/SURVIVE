@@ -1,0 +1,50 @@
+[gd_resource type="Resource" script_class="DialogueData" format=3 uid="uid://bg4qp1kaaaw40"]
+
+[ext_resource type="Script" uid="uid://eit47g61t72a" path="res://addons/dialogue_nodes/objects/DialogueData.gd" id="1_mxsib"]
+
+[resource]
+script = ExtResource("1_mxsib")
+starts = {
+"START1": &"0_1"
+}
+nodes = {
+&"0_1": {
+"link": &"3_1",
+"offset": Vector2(-200, 200),
+"size": Vector2(180.00005, 86.000015),
+"start_id": "START1"
+},
+&"1_1": {
+"dialogue": "눈을 뜨자 희미한 소독약 냄새가 코를 찌른다.",
+"offset": Vector2(80, 200),
+"options": {
+0: {
+"condition": Array[Dictionary]([]),
+"link": "END",
+"text": "하나 "
+},
+1: {
+"condition": Array[Dictionary]([]),
+"link": "END",
+"text": "둘 "
+},
+2: {
+"condition": Array[Dictionary]([]),
+"link": "END",
+"text": "셋 "
+}
+},
+"size": Vector2(300, 300),
+"speaker": "상황 "
+},
+&"3_1": {
+"link": &"3_2",
+"offset": Vector2(40, 540),
+"signalValue": "INSIGHT|CALM|관찰|차분한 사람의 특성이다 ."
+},
+&"3_2": {
+"link": &"1_1",
+"offset": Vector2(40, 640),
+"signalValue": "INSIGHT|CAUTIOUS|관찰|신중한 사람의 특정이다 "
+}
+}
