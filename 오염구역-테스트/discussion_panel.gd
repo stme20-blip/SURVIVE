@@ -152,6 +152,10 @@ func _create_ui() -> void:
 
 	message_input = LineEdit.new()
 	panel.add_child(message_input)
+	# Web export uses an HTML input overlay on touch devices. Explicitly keep
+	# the virtual keyboard enabled for the survival-record composer.
+	message_input.virtual_keyboard_enabled = true
+	message_input.virtual_keyboard_show_on_focus = true
 	message_input.position = Vector2(20, 582)
 	message_input.size = Vector2(270, 42)
 	message_input.placeholder_text = "대사 또는 기록 입력"
@@ -339,6 +343,8 @@ func _add_comment_entry(
 	if editing_comment_id == comment_id:
 		var edit_input := LineEdit.new()
 		box.add_child(edit_input)
+		edit_input.virtual_keyboard_enabled = true
+		edit_input.virtual_keyboard_show_on_focus = true
 		edit_input.text = text
 		edit_input.custom_minimum_size = Vector2(0, 38)
 		edit_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
