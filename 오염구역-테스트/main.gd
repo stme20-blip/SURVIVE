@@ -1836,8 +1836,10 @@ func _setup_mobile_web_input_bridge() -> void:
 			field.spellcheck = false;
 			field.setAttribute('aria-hidden', 'true');
 			Object.assign(field.style, {
-				position: 'fixed', left: '0', bottom: '0', width: '2px', height: '2px',
-				opacity: '0.01', border: '0', padding: '0', margin: '0', zIndex: '2147483647'
+				position: 'fixed', left: '0', top: '0', width: '1px', height: '1px',
+				opacity: '0.001', color: 'transparent', caretColor: 'transparent',
+				background: 'transparent', border: '0', padding: '0', margin: '0',
+				zIndex: '2147483647', pointerEvents: 'none'
 			});
 			document.body.appendChild(field);
 			const sendValue = () => {
@@ -1845,13 +1847,25 @@ func _setup_mobile_web_input_bridge() -> void:
 			};
 			field.addEventListener('input', sendValue);
 			field.addEventListener('change', sendValue);
+			field.addEventListener('compositionend', sendValue);
 			window.surviveMobileText = {
+				place(value, x, y, width, height) {
+					const canvas = document.getElementById('canvas');
+					if (!canvas) return;
+					const bounds = canvas.getBoundingClientRect();
+					field.value = value || '';
+					field.style.left = `${bounds.left + (x * bounds.width)}px`;
+					field.style.top = `${bounds.top + (y * bounds.height)}px`;
+					field.style.width = `${Math.max(2, width * bounds.width)}px`;
+					field.style.height = `${Math.max(2, height * bounds.height)}px`;
+					field.style.pointerEvents = 'auto';
+				},
 				open(value) {
 					field.value = value || '';
 					field.focus({ preventScroll: true });
 					field.setSelectionRange(field.value.length, field.value.length);
 				},
-				close() { field.blur(); }
+				close() { field.blur(); field.style.pointerEvents = 'none'; }
 			};
 		}
 	""", true)
@@ -1888,6 +1902,29 @@ func _open_mobile_web_input(input: LineEdit) -> void:
 	_mobile_web_input_bridge.open(input.text)
 
 
+func _place_mobile_web_input() -> void:
+
+	if not OS.has_feature("web") or _mobile_web_input_bridge == null:
+		return
+
+	if not is_instance_valid(mobile_message_input) or not mobile_message_input.is_visible_in_tree():
+		_close_mobile_web_input()
+		return
+
+	var viewport_size := get_viewport().get_visible_rect().size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+
+	var rect := mobile_message_input.get_global_rect()
+	_mobile_web_input_bridge.place(
+		mobile_message_input.text,
+		rect.position.x / viewport_size.x,
+		rect.position.y / viewport_size.y,
+		rect.size.x / viewport_size.x,
+		rect.size.y / viewport_size.y
+	)
+
+
 func _on_mobile_web_input_changed(args: Array) -> void:
 
 	if args.is_empty() or not is_instance_valid(_mobile_web_active_input):
@@ -1920,6 +1957,9 @@ func _set_mobile_ui_visible(
 
 	mobile_dialogue_panel.visible = value
 	mobile_discussion_panel.visible = value
+
+	if not value:
+		_close_mobile_web_input()
 
 
 # =========================================================
@@ -3256,6 +3296,7 @@ func _layout_mobile_discussion(
 		50
 	)
 
+	_place_mobile_web_input()
 
 	_refresh_mobile_feed()
 
@@ -3310,6 +3351,7 @@ func _submit_mobile_comment_after_ime() -> void:
 
 
 	mobile_message_input.clear()
+	_place_mobile_web_input()
 
 
 	await CommentSync.submit(
