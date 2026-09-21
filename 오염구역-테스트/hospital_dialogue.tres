@@ -9,42 +9,99 @@ starts = {
 }
 nodes = {
 &"0_1": {
-"link": &"3_1",
-"offset": Vector2(-200, 200),
-"size": Vector2(180.00005, 86.000015),
+"link": &"1_1",
+"offset": Vector2(-18046, -10626),
+"size": Vector2(180.00012, 86),
 "start_id": "START1"
 },
 &"1_1": {
-"dialogue": "눈을 뜨자 희미한 소독약 냄새가 코를 찌른다.",
-"offset": Vector2(80, 200),
+"dialogue": "당신은 [영원 정신병원] 팻말이 표기된 정문에서 눈을 뜹니다.
+어두운 밤, 스산한 기운이 풍기는 대형 폐건물 앞입니다.
+주변에는 아무런 인기척도 느껴지지 않습니다.",
+"offset": Vector2(-17794, -10724),
+"options": {
+0: {
+"condition": Array[Dictionary]([]),
+"link": &"1_2",
+"text": "건물 주변을 둘러본다."
+},
+1: {
+"condition": Array[Dictionary]([]),
+"link": &"1_3",
+"text": "건물 안으로 바로 진입한다."
+},
+2: {
+"condition": Array[Dictionary]([]),
+"link": &"1_4",
+"text": "탐사를 포기하고 돌아간다."
+}
+},
+"size": Vector2(300.00024, 333.0005),
+"speaker": "병원 건물 앞 "
+},
+&"1_2": {
+"dialogue": "우선 병원 주변부터 살펴보기로 결정했습니다.
+나뭇가지가 바람에 건물 외벽을 긁는 듯한 스윽ㅡ 스윽ㅡ 소리가 정적을 깨며 들려옵니다.
+건물 로비의 불이 깜깜하게 소등되어 잘 보이지 않습니다.
+외관에 붙은 안내 전광판은 빛을 잃은 채 기울어져 낡아가고 있습니다.",
+"offset": Vector2(-17416, -11060),
 "options": {
 0: {
 "condition": Array[Dictionary]([]),
 "link": "END",
-"text": "하나 "
+"text": "앞쪽의 화단으로 이동한다."
 },
 1: {
 "condition": Array[Dictionary]([]),
 "link": "END",
-"text": "둘 "
+"text": "뒤쪽의 큰 주차장으로 이동한다."
 },
 2: {
 "condition": Array[Dictionary]([]),
 "link": "END",
-"text": "셋 "
+"text": "구석진 곳의 흡연 구역으로 이동한다."
 }
 },
 "size": Vector2(300, 300),
-"speaker": "상황 "
+"speaker": "병원 건물 앞"
 },
-&"3_1": {
-"link": &"3_2",
-"offset": Vector2(40, 540),
-"signalValue": "INSIGHT|CALM|관찰|차분한 사람의 특성이다 ."
+&"1_3": {
+"dialogue": "로비 안으로 진입하는 유리문은 잠겨 있지 않습니다.
+깨지고 금이 간 유리에 손을 대는 순간 '덜컹' 소리를 내며 떨립니다.
+조심히 문을 밀고 들어가자, 어두운 로비 안을 비추는 희미한 불빛이 시선을 사로잡습니다.
+썩은 소독약의 지독한 냄새. 먼지 쌓인 공기가 폐 깊숙이 파고듭니다.",
+"offset": Vector2(-17416, -10724),
+"options": {
+0: {
+"condition": Array[Dictionary]([]),
+"link": "END",
+"text": "접수 데스크 불빛으로 이동한다."
 },
-&"3_2": {
-"link": &"1_1",
-"offset": Vector2(40, 640),
-"signalValue": "INSIGHT|CAUTIOUS|관찰|신중한 사람의 특정이다 "
+1: {
+"condition": Array[Dictionary]([]),
+"link": "END",
+"text": "휴게실 비상구 불빛으로 이동한다."
+},
+2: {
+"condition": Array[Dictionary]([]),
+"link": "END",
+"text": "24시 매점 간판의 불빞으로 이동한다."
+}
+},
+"size": Vector2(300, 300),
+"speaker": "병원 건물 내부 "
+},
+&"1_4": {
+"dialogue": "ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ 그게 가능할 거라고 생각하시나요?",
+"offset": Vector2(-17416, -10388),
+"options": {
+0: {
+"condition": Array[Dictionary]([]),
+"link": "END",
+"text": "뭐라고?"
+}
+},
+"size": Vector2(300, 240),
+"speaker": "알 수 없는 환청 "
 }
 }

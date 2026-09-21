@@ -227,6 +227,16 @@ PC 6×2, 모바일 2×6.
 
 ## 7. Episode Select
 
+### 온라인 서버의 에피소드 고정 흐름 (2026-09-21)
+
+- 방장은 `새로운 서버 만들기`에서 로컬 서버 이름만 먼저 저장하고 캐릭터·특성·에피소드를 모두 고른다.
+- 에피소드 선택 직후 `create-room` Edge Function이 방장의 캐릭터 이름과 허용된 `episode_id`(`school` 또는 `hospital`)를 받아 실제 서버를 만들고 초대 코드를 발급한다.
+- `rooms.episode_id`가 서버가 정한 에피소드의 기준이다. 클라이언트는 host UUID, 최대 인원, 상태를 정하지 않는다.
+- 참가자는 초대 코드로 참가한 뒤 캐릭터·특성만 고른다. `episode_select.gd`는 서버의 `episode_id`를 자동 적용해 에피소드 선택 UI를 건너뛰고 로비로 이동한다.
+- 참가자의 표시 이름은 특성 선택 후 `update-member-profile` Edge Function이 본인 `room_members` 행에만 반영한다.
+- 새 migration: `20260921043000_room_episode_and_profile.sql`. `create-room` v2, `join-room` v2, `update-member-profile` v1은 Supabase에 ACTIVE 상태로 배포됐다.
+- `main.tscn`에서만 SettingsOverlay가 참가자 아이콘을 톱니바퀴 왼쪽에 보인다. 서버 멤버는 `get-room-members`로 조회하며, 방장은 `delete-room`, 참가자는 `leave-room` Edge Function을 통해서만 서버를 관리한다.
+
 현재 새 씬:
 - `res://episode_select.tscn`
 
@@ -1227,9 +1237,31 @@ RoomManager의 정상 저장/undo/transcript 기능은 불필요하게 변경하
 - 성공 응답: room_id, invite_code, max_players, status. 실패 응답은 error 코드. 인증/네트워크/HTTP/함수/DB/비정상 응답을 Godot 안내와 안전한 Output 코드로 구분한다.
 - RoomManager.create_room에 선택 인자 online_room만 추가했다. 기존 로컬 room_id, LOCAL_1, SCHEMA_VERSION=4, 저장/진행 구조를 유지하고 `current_room.online_room`에 온라인 room_id, invite_code, max_players, status, host_user_id, is_host를 저장한다. 온라인 메타데이터는 클라이언트 표시용이며 향후 서버 권한 판정에 신뢰하면 안 된다.
 - DB에 room_name 컬럼이 없으므로 서버 이름과 이름 변경은 기존 로컬 저장에만 적용한다. 기존 삭제도 로컬 삭제만 수행한다. 온라인 삭제/이름 변경/클라우드 저장은 구현하지 않았다.
-- 생성 UI: 새로운 서버 만들기 → 요청 중 생성/이전/이름 입력 비활성화 → 성공 후 초대 코드 표시 → 계속 → 기존 prologue.tscn. 실패하면 기존 current_room을 교체하지 않으며 입력을 복구한다. 초대 코드는 저장된 서버 목록에도 표시한다.
-- 로컬 저장 실패 시 계속 버튼으로 저장만 재시도하며 서버를 다시 만들지 않는다. 기존 로컬 저장 불러오기는 유지한다. 온라인 인증 없는 새 온라인 서버 생성은 세션 없음 안내로 차단한다.
+- 생성 UI: 새로운 서버 만들기 또는 초대 코드 참가 → episode_select.tscn → character_select.tscn → 특성 선택 순서로 진행한다. 선택한 에피소드는 캐릭터·특성 설정 후 자동으로 이어지며, 그 시점에 온라인 서버 생성과 초대 코드 발급을 진행한다. 초대 코드는 저장된 서버 목록에도 표시한다.
+- 로컬 저장 실패 시 캐릭터 선택 화면으로 이동하지 않는다. 기존 로컬 저장 불러오기는 유지한다. 온라인 인증 없는 새 온라인 서버 생성은 세션 없음 안내로 차단한다.
 - 자동 POST 재시도/영속 idempotency는 이번 범위에 없다. 타임아웃 또는 응답 유실 시 생성 결과가 불확실하므로 재요청 전 Dashboard rooms를 확인한다.
 - 함수 모의 테스트(Node): 무인증/CORS, 인증된 host 고정, 정원/상태 고정, 초대 코드 충돌 재시도 및 소진, 다른 UNIQUE 오류, DB/설정/네트워크 오류 통과.
-- Godot 4.7.1 격리 복사본: 세션 없음/HTTP/비정상 응답 처리, 기존 로컬 저장 호환, 온라인 메타데이터 저장 복원, UI 실패 복구, 중복 클릭 방지, 코드 표시, 프롤로그 이동 통과. 실제 웹 호출 및 DB trigger/RLS 동작은 배포 후 확인해야 한다.
+- Godot 4.7.1 격리 복사본: 세션 없음/HTTP/비정상 응답 처리, 기존 로컬 저장 호환, 온라인 메타데이터 저장 복원, UI 실패 복구, 중복 클릭 방지, 코드 표시, 에피소드 선택 이동 통과. 실제 웹 호출 및 DB trigger/RLS 동작은 배포 후 확인해야 한다.
 - 초대 코드 참가, Realtime/Presence, 선택 동의는 미구현. AuthManager, main.gd, PC/모바일 게임 레이아웃, Dialogue Nodes, 스토리 .tres는 수정하지 않았다.
+
+## 41. join-room 및 참가자 목록 (2026-09-21)
+
+- `20260921030000_join_room.sql`은 원격 DB에 적용됐고 `join-room` Edge Function은 ACTIVE로 배포됐다. 배포 절차와 이후 변경 안내는 `supabase/README.md`에 기록한다.
+- `start.gd`의 `초대 코드 입력 >`은 `room_lobby.tscn`으로 이동한다. room_lobby는 Control/Container 기반이며 PC 1536×648과 세로 모바일 ScreenLayout을 재사용한다. `main.gd` 레이아웃은 수정하지 않았다.
+- `RoomService.join_room()`과 `get_members()`는 기존 `await AuthManager.get_access_token()`을 사용한다. `/functions/v1/join-room`은 Bearer token과 publishable key로 호출한다. 참가자 목록은 기존 SELECT RLS 정책을 따르는 `/rest/v1/room_members` GET으로 읽는다. 토큰·응답 본문은 로그에 남기지 않는다.
+- `join-room`은 입력 코드를 trim/대문자화하고 create-room과 동일한 6자리 `[A-HJ-NP-Z2-9]` 형식만 허용한다. 인증은 함수 내부 `/auth/v1/user`로 검증하며 client `user_id`는 신뢰하지 않는다.
+- SQL RPC `public.join_room_by_code(text, uuid)`는 service_role만 실행 가능하다. `SECURITY DEFINER`, `search_path=''`, rooms row `FOR UPDATE`를 사용해 invite code 조회, lobby/playing 검사, 기존 멤버 idempotent 재입장, 최대 4명 검사, member insert를 하나의 DB transaction에서 처리한다. host가 재입장해도 role을 덮어쓰지 않는다. closed 및 다른 상태는 참가 불가다.
+- join 성공 응답: room_id, invite_code, host_user_id, is_host, max_players=4, status(lobby/playing), member_count. UI는 ROOM_NOT_FOUND, ROOM_FULL, ROOM_CLOSED, UNAUTHORIZED, NETWORK_ERROR, 형식 오류를 한국어로 안내한다.
+- RoomManager는 기존 로컬 저장 구조를 보존한다. `accept_joined_room()`은 `online_room`의 room_id와 현재 인증 사용자 ID가 같은 기존 로컬 저장을 재사용해 진행/캐릭터 설정을 보존한다. 처음 참가하면 새 로컬 저장을 만들며 `online_room`에 local_user_id와 host 여부를 함께 저장한다. 다른 사용자나 다른 온라인 방의 로컬 저장은 재사용하지 않는다.
+- 온라인 저장을 생성·불러오기하면 room_lobby가 참가자 목록을 한 번 읽고 수동 새로고침을 제공한다. 목록에는 방장/참가자 순서와 display_name(있을 때)만 표시하며 UUID는 노출하지 않는다. 이 단계에서는 Realtime, Presence, 댓글·진행·선택 동기화와 방장 권한 적용은 구현하지 않았다.
+- Node 모의 함수 테스트와 Godot 4.7.1 격리 복사본에서 코드 정규화, 인증·오류 처리, host/member 역할, 재입장 진행 보존, 중복 클릭 차단, 초대 코드/참가자 표시, 기존 create-room 흐름 회귀를 검증했다. 실제 원격 DB 임시 테이블 transaction에서도 RPC 실행 권한, 재입장, lobby/playing, closed, 최대 4명 규칙을 확인하고 rollback했다. 배포 후 실제 Edge endpoint는 OPTIONS 204/CORS 허용 헤더, 무인증 POST 401을 반환했고, 격리 익명 사용자 A/B가 실제 생성·참가·재입장을 통과했다. 테스트 방 `df3a3092-aaff-4114-a5ce-b131ff5a6d6b`은 lobby·정원 4·host 1명·member 1명으로 원격 DB에서 확인됐다.
+- Web Godot에서 `room_members` REST 직접 조회가 `NETWORK_ERROR`로 처리되는 사례가 있어, 목록 조회는 `get-room-members` Edge Function으로 통일했다. 함수는 인증 토큰을 검증하고 service role로 호출자 자신의 room_members 행을 먼저 확인한 후 해당 방의 최소 목록(user_id, role, display_name, joined_at)만 반환한다. 비회원·비멤버는 목록을 받지 못한다. `get-room-members`는 ACTIVE 배포됐고 OPTIONS 204/CORS, 무인증 POST 401, 실제 A/B 생성·참가·재입장·목록 조회를 2026-09-21에 확인했다.
+
+## 41. 첫 Dialogue 선택지 초기 표시 보정 (2026-09-21)
+
+- Dialogue Nodes의 `DialogueBox`는 대화 처리 때 `options_container`를 숨기고 `RichTextWait.wait_finished`에서 다시 표시한다.
+- 첫 진입에는 재사용된 `RichTextWait.finished`/`displayed` 상태가 남아 완료 signal이 생략될 수 있으며, ESC는 플러그인 내부의 완료 경로를 직접 호출해 선택지를 보이게 한다.
+- 플러그인과 `.tres` 그래프는 수정하지 않는다. `main.gd`에서 새 게임의 첫 `DialogueBox.start()` 직전에만 해당 효과의 `finished`, `skip`, `displayed`를 초기화한다.
+- `wait_finished` 연결과 초기 상태/완료 상태는 `[first-dialogue]` 로그로 확인한다. 이후 대화와 ESC 스킵 동작은 기존 Dialogue Nodes 경로를 그대로 사용한다.
+- 추가 보정: 첫 선택지의 `wait_finished`가 `DialogueBox._on_dialogue_processed()` 내부에서 `options_container.hide()`보다 먼저 실행될 수 있다. `main.gd`는 첫 실제 선택지만 다음 프레임에 `RichTextWait.finished`를 검사하고, 자연 완료 상태이면서 컨테이너가 숨겨진 경우에만 선택지를 복구한다. 타이핑 중에는 복구하지 않는다.
+- 병원 첫 상황문처럼 줄바꿈이 포함되면 DialogueParser의 `last`와 `length` 비교가 일치하지 않아 `wait_finished`가 생략될 수 있다. 첫 실제 선택지에만 텍스트 길이/기본 속도(50자/초) 기반의 자연 완료 감시를 추가해, 텍스트 표시 예상 시간이 지난 뒤에도 숨겨진 선택지만 복구한다.

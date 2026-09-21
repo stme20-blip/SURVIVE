@@ -64,6 +64,10 @@ func _run() -> void:
 	menu._on_continue_pressed()
 	await process_frame
 	await process_frame
-	assert(current_scene.scene_file_path == "res://prologue.tscn")
-	print("CREATE_ROOM_CHECK passed: errors, local compatibility, metadata persistence, UI recovery, duplicate click guard, code display and prologue transition")
+	assert(current_scene.scene_file_path == "res://room_lobby.tscn")
+	current_scene._continue_pressed()
+	await process_frame
+	await process_frame
+	assert(current_scene.scene_file_path == "res://episode_select.tscn")
+	print("CREATE_ROOM_CHECK passed: errors, local compatibility, metadata persistence, UI recovery, duplicate click guard, code display and episode selection transition")
 	quit()

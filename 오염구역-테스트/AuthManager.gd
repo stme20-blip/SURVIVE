@@ -143,6 +143,12 @@ func _load_session() -> void:
 			_cache_error = "저장된 인증 정보가 불완전합니다. 로컬 플레이로 기존 저장을 이용할 수 있습니다."
 			return
 	_session = parsed
+	# A saved anonymous session must be usable before the login scene is visited again.
+	is_guest = true
+	is_authenticated = true
+	is_logged_in = false
+	user_id = str(parsed.get("user_id", ""))
+	nickname = "비회원"
 
 
 func _expires_at() -> float:
@@ -151,12 +157,33 @@ func _expires_at() -> float:
 
 func get_access_token() -> String:
 	# Future online requests should await this instead of reading cached tokens.
-	if not is_guest or _session.is_empty():
+	if _session.is_empty():
 		return ""
+	if not is_guest:
+		is_guest = true
+		user_id = str(_session.get("user_id", ""))
 	if _expires_at() <= Time.get_unix_time_from_system() + 60:
 		if not (await enter_guest_mode()).is_empty():
 			return ""
 	return str(_session.get("access_token", "")) if is_authenticated else ""
+
+
+func refresh_access_token() -> String:
+	if _session.is_empty():
+		return ""
+	var waited := 0
+	while _busy and waited < 50:
+		await get_tree().create_timer(0.1).timeout
+		waited += 1
+	if _busy:
+		print("[auth] refresh is still busy")
+		return ""
+	is_authenticated = false
+	var error := await enter_guest_mode()
+	if not error.is_empty():
+		print("[auth] refresh failed: ", error)
+		return ""
+	return str(_session.get("access_token", ""))
 
 
 func _refresh_if_needed() -> void:

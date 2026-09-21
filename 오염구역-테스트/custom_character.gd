@@ -1205,8 +1205,8 @@ func _apply_responsive_layout() -> void:
 
 
 		portrait_panel.custom_minimum_size = Vector2(
-			150,
-			190
+			160,
+			160
 		)
 
 
@@ -1304,8 +1304,8 @@ func _apply_responsive_layout() -> void:
 
 
 		portrait_panel.custom_minimum_size = Vector2(
-			145,
-			180
+			150,
+			150
 		)
 
 

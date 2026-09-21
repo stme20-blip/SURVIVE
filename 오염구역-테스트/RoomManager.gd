@@ -168,10 +168,66 @@ func create_room(
 	# Optional metadata only: local IDs, members, save schema and story remain intact.
 	if not online_room.is_empty():
 		current_room["online_room"] = online_room.duplicate(true)
+		current_room["members"][0]["is_host"] = bool(online_room.get("is_host", false))
 	save_current_room()
 
 
 	return current_room
+
+
+func accept_joined_room(online: Dictionary, local_user_id: String) -> bool:
+	# Reuse only the same online room AND authenticated owner; preserve story/settings.
+	var candidates: Array = [current_room] + get_saved_rooms()
+	var found_room: Dictionary = {}
+	for candidate in candidates:
+		var stored = candidate.get("online_room", {})
+		if not stored is Dictionary:
+			continue
+		var owner := str(stored.get("local_user_id", stored.get("host_user_id", "") if bool(stored.get("is_host", false)) else ""))
+		if stored.get("room_id", "") == online.get("room_id", "") and owner == local_user_id:
+			found_room = candidate.duplicate(true)
+			break
+	var metadata := online.duplicate(true)
+	metadata["local_user_id"] = local_user_id
+	metadata["needs_profile_setup"] = not bool(metadata.get("is_host", false))
+	# A re-entry to the same server must be distinguishable from the previous
+	# local membership, which may have been marked as left by the UI.
+	metadata["membership_session_id"] = str(Time.get_ticks_usec())
+	if found_room.is_empty():
+		create_room("참가 서버 " + str(online.get("invite_code", "")), 4, metadata)
+	else:
+		current_room = found_room
+		_normalize_loaded_room()
+		current_room["online_room"] = metadata
+	for member in current_room.get("members", []):
+		if member.get("member_id", "") == LOCAL_MEMBER_ID:
+			member["is_host"] = bool(online.get("is_host", false))
+	return save_current_room()
+
+
+func is_pending_online_host() -> bool:
+	var online = current_room.get("online_room", {})
+	return online is Dictionary and bool(online.get("pending_host_creation", false))
+
+
+func has_active_online_room() -> bool:
+	var online = current_room.get("online_room", {})
+	return online is Dictionary and not str(online.get("room_id", "")).is_empty()
+
+
+func complete_online_host_room(online: Dictionary) -> bool:
+	if current_room.is_empty() or not is_pending_online_host():
+		return false
+	var metadata := online.duplicate(true)
+	metadata["host_user_id"] = AuthManager.user_id
+	metadata["local_user_id"] = AuthManager.user_id
+	metadata["is_host"] = true
+	metadata["needs_profile_setup"] = false
+	current_room["online_room"] = metadata
+	for member in current_room.get("members", []):
+		if member.get("member_id", "") == LOCAL_MEMBER_ID:
+			member["is_host"] = true
+	return save_current_room()
 
 
 # =========================================================
@@ -1730,6 +1786,27 @@ func can_edit_comment(
 			""
 		)
 	) == LOCAL_MEMBER_ID
+
+
+func merge_online_comments(comments: Array, local_user_id: String) -> void:
+	if current_room.is_empty(): return
+	var entries: Array = []
+	for comment in comments:
+		if not comment is Dictionary: continue
+		var system := str(comment.get("author_name", "")) == "__SYSTEM__"
+		entries.append({"type":"comment", "online_comment":true, "system_message":system, "comment_id":str(comment.get("id", "")), "author_id":LOCAL_MEMBER_ID if str(comment.get("author_user_id", "")) == local_user_id else "REMOTE_" + str(comment.get("author_user_id", "")), "scene_id":str(comment.get("scene_id", "")), "scene_title":str(comment.get("scene_title", "")), "speaker":"" if system else str(comment.get("author_name", "")), "text":str(comment.get("body", "")), "created_at":str(comment.get("created_at", "")), "updated_at":str(comment.get("updated_at", ""))})
+	var feed: Array = current_room.get("feed", [])
+	feed = feed.filter(func(entry): return not bool(entry.get("online_comment", false)))
+	feed.append_array(entries.duplicate(true))
+	current_room["feed"] = feed
+	var transcript: Array = current_room.get("transcript", [])
+	transcript = transcript.filter(func(entry): return not bool(entry.get("online_comment", false)))
+	for entry in entries:
+		if not bool(entry.get("system_message", false)):
+			transcript.append(entry.duplicate(true))
+	current_room["transcript"] = transcript
+	save_current_room()
+	feed_changed.emit()
 
 
 # =========================================================

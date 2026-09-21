@@ -18,11 +18,11 @@ config/icon="res://icon.svg"
 [autoload]
 
 AuthManager="*res://AuthManager.gd"
-
 GameData="*uid://bvuhetv1yo2m5"
 RoomManager="*uid://dbcx5uqb5ni6h"
 ScreenLayout="*uid://f2q7jqe5wou5"
 SettingsOverlay="*res://SettingsOverlay.gd"
+CommentSync="*res://CommentSync.gd"
 
 [display]
 

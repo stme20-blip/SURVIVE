@@ -52,13 +52,13 @@ var characters := [
 	{
 		"id": 1,
 		"name": "김솔음",
-		"portrait": "res://player_portrait.png"
+		"portrait": "res://kim_soleum_portrait.png"
 	},
 
 	{
 		"id": 2,
 		"name": "백사헌",
-		"portrait": "res://player_portrait.png"
+		"portrait": "res://baek_saheon_portrait.png"
 	},
 
 	{
@@ -822,10 +822,10 @@ func _apply_responsive_layout() -> void:
 			)
 
 
-			# 모바일 초상화 폭 축소
+			# 정사각형 초상화 기준 프레임
 			portrait_frame.custom_minimum_size = Vector2(
-				62,
-				72
+				68,
+				68
 			)
 
 
@@ -935,8 +935,8 @@ func _apply_responsive_layout() -> void:
 
 
 			portrait_frame.custom_minimum_size = Vector2(
-				72,
-				88
+				82,
+				82
 			)
 
 

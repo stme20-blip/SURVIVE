@@ -69,6 +69,11 @@ const EPISODES := [
 ]
 
 
+# 활성 에피소드 카드에만 사용하는 원본 배경 이미지다.
+const SCHOOL_CARD_BACKGROUND := preload("res://school_hallway.png")
+const HOSPITAL_CARD_BACKGROUND := preload("res://hospital_exterior.png")
+
+
 # =========================================================
 # 선택 상태
 # =========================================================
@@ -76,6 +81,7 @@ const EPISODES := [
 var selected_index: int = -1
 
 var episode_buttons: Array[Button] = []
+var episode_card_labels: Array[Label] = []
 
 
 # =========================================================
@@ -121,6 +127,84 @@ func _ready() -> void:
 	call_deferred(
 		"_apply_responsive_layout"
 	)
+	if _should_resume_after_character_setup():
+		# The existing episode is resumed immediately after character setup. Cover
+		# this transitional scene so its cards never flash for one frame.
+		_show_transition_loading()
+		call_deferred("_resume_episode_after_character_setup")
+	else:
+		call_deferred("_apply_host_episode_if_needed")
+
+
+func _should_resume_after_character_setup() -> bool:
+	var online: Dictionary = RoomManager.current_room.get("online_room", {})
+	if not bool(online.get("awaiting_character_after_episode", false)):
+		return false
+	return int(RoomManager.get_game_state().get("selected_character_id", 0)) > 0
+
+
+func _show_transition_loading() -> void:
+	var overlay := ColorRect.new()
+	overlay.color = Color("#08090b")
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(center)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	center.add_child(row)
+	var spinner := Label.new()
+	spinner.text = "↻"
+	spinner.add_theme_font_size_override("font_size", 24)
+	spinner.custom_minimum_size = Vector2(24, 24)
+	spinner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	spinner.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	spinner.pivot_offset = Vector2(12, 12)
+	row.add_child(spinner)
+	var label := Label.new()
+	label.text = "진입 중"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 20)
+	row.add_child(label)
+	var spinner_tween := create_tween().set_loops()
+	spinner_tween.tween_property(spinner, "rotation", TAU, 0.8).from(0.0)
+
+
+func _apply_host_episode_if_needed() -> void:
+	# A joining player never chooses an episode. The host's server-owned id is applied.
+	if not RoomManager.has_active_online_room():
+		return
+	var online: Dictionary = RoomManager.current_room.get("online_room", {})
+	if bool(online.get("is_host", false)) or not bool(online.get("needs_profile_setup", false)):
+		return
+	var wanted := str(online.get("episode_id", ""))
+	for index in range(EPISODES.size()):
+		if str(EPISODES[index].get("id", "")) == wanted and bool(EPISODES[index].get("enabled", false)):
+			selected_index = index
+			_on_start_pressed()
+			return
+	description_label.text = "방장이 정한 에피소드를 찾을 수 없습니다. 초대 코드를 다시 확인해 주세요."
+
+
+func _resume_episode_after_character_setup() -> void:
+	# Hosts choose the episode before character setup. On the return trip, resume
+	# that one selected episode instead of asking for it again.
+	var online: Dictionary = RoomManager.current_room.get("online_room", {})
+	if not bool(online.get("awaiting_character_after_episode", false)):
+		return
+	var state: Dictionary = RoomManager.get_game_state()
+	if int(state.get("selected_character_id", 0)) <= 0:
+		return
+	var wanted := str(online.get("episode_id", ""))
+	for index in range(EPISODES.size()):
+		if str(EPISODES[index].get("id", "")) == wanted and bool(EPISODES[index].get("enabled", false)):
+			selected_index = index
+			_on_start_pressed()
+			return
+	description_label.text = "선택한 에피소드를 찾을 수 없습니다. 다시 선택해 주세요."
 
 
 # =========================================================
@@ -406,6 +490,7 @@ func _create_ui() -> void:
 func _create_episode_cards() -> void:
 
 	episode_buttons.clear()
+	episode_card_labels.clear()
 
 
 	for index in range(
@@ -484,6 +569,67 @@ func _create_episode_cards() -> void:
 		)
 
 
+		if enabled:
+
+			_add_episode_card_background(
+				button,
+				str(episode.get("id", ""))
+			)
+
+
+func _add_episode_card_background(
+	button: Button,
+	episode_id: String
+) -> void:
+
+	var background_texture: Texture2D
+
+	match episode_id:
+		"school":
+			background_texture = SCHOOL_CARD_BACKGROUND
+		"hospital":
+			background_texture = HOSPITAL_CARD_BACKGROUND
+		_:
+			return
+
+
+	# Button의 자식으로 그려야 화면 전체 배경 뒤로 밀려나지 않는다.
+	# 글자는 별도 Label로 올려 이미지와 어두운 막보다 항상 앞에 둔다.
+	button.clip_contents = true
+	var image := TextureRect.new()
+	image.texture = background_texture
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	image.offset_left = 1.0
+	image.offset_top = 1.0
+	image.offset_right = -1.0
+	image.offset_bottom = -1.0
+	button.add_child(image)
+
+	# 이미지 원본은 유지한 채 글자가 충분히 읽히는 정도로만 어둡게 한다.
+	var shade := ColorRect.new()
+	shade.color = Color(0.0, 0.0, 0.0, 0.56)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.offset_left = 1.0
+	shade.offset_top = 1.0
+	shade.offset_right = -1.0
+	shade.offset_bottom = -1.0
+	button.add_child(shade)
+
+	var label := Label.new()
+	label.text = button.text
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	button.text = ""
+	button.add_child(label)
+	episode_card_labels.append(label)
+
+
 # =========================================================
 # 카드 스타일
 # =========================================================
@@ -496,12 +642,12 @@ func _apply_episode_button_style(
 	var normal := StyleBoxFlat.new()
 
 
-	normal.bg_color = Color(
-		0.040,
-		0.043,
-		0.048,
-		1.0
-	)
+
+	if enabled:
+		# 카드 이미지 위에 얹히는 아주 얇은 색막이다.
+		normal.bg_color = Color(0.040, 0.043, 0.048, 0.18)
+	else:
+		normal.bg_color = Color(0.040, 0.043, 0.048, 1.0)
 
 
 	normal.border_color = Color(
@@ -527,12 +673,11 @@ func _apply_episode_button_style(
 	var hover := normal.duplicate()
 
 
-	hover.bg_color = Color(
-		0.060,
-		0.064,
-		0.070,
-		1.0
-	)
+
+	if enabled:
+		hover.bg_color = Color(0.060, 0.064, 0.070, 0.10)
+	else:
+		hover.bg_color = Color(0.060, 0.064, 0.070, 1.0)
 
 
 	hover.border_color = Color(
@@ -546,12 +691,11 @@ func _apply_episode_button_style(
 	var pressed := normal.duplicate()
 
 
-	pressed.bg_color = Color(
-		0.085,
-		0.090,
-		0.100,
-		1.0
-	)
+
+	if enabled:
+		pressed.bg_color = Color(0.085, 0.090, 0.100, 0.14)
+	else:
+		pressed.bg_color = Color(0.085, 0.090, 0.100, 1.0)
 
 
 	pressed.border_color = Color(
@@ -739,6 +883,41 @@ func _on_start_pressed() -> void:
 			dialogue_file
 		)
 
+	var state: Dictionary = RoomManager.get_game_state()
+	var selected_character_id := int(state.get("selected_character_id", 0))
+	var online: Dictionary = RoomManager.current_room.get("online_room", {})
+	if selected_character_id <= 0:
+		if not online.is_empty():
+			online["episode_id"] = str(episode.get("id", ""))
+			online["awaiting_character_after_episode"] = true
+			RoomManager.current_room["online_room"] = online
+			RoomManager.save_current_room()
+		get_tree().change_scene_to_file("res://character_select.tscn")
+		return
+	if bool(online.get("awaiting_character_after_episode", false)):
+		online.erase("awaiting_character_after_episode")
+		RoomManager.current_room["online_room"] = online
+		RoomManager.save_current_room()
+
+	# Host creation is intentionally delayed until character and episode setup is complete.
+	if RoomManager.is_pending_online_host():
+		start_button.disabled = true
+		description_label.text = "서버를 생성하고 초대 코드를 발급하는 중입니다..."
+		var service := preload("res://RoomService.gd").new()
+		add_child(service)
+		var display_name := str(RoomManager.get_local_member().get("character_name", "")).strip_edges()
+		var result: Dictionary = await service.create_room(display_name, str(episode.get("id", "")))
+		service.queue_free()
+		if result.has("error") or not RoomManager.complete_online_host_room(result.get("data", {})):
+			description_label.text = str(result.get("message", "서버 생성에 실패했습니다. 네트워크 연결을 확인한 뒤 다시 시도해 주세요."))
+			start_button.disabled = false
+			return
+		get_tree().change_scene_to_file("res://room_lobby.tscn")
+		return
+	if RoomManager.has_active_online_room():
+		get_tree().change_scene_to_file("res://room_lobby.tscn")
+		return
+
 
 	# =====================================================
 	# 게임으로 이동
@@ -835,6 +1014,14 @@ func _apply_responsive_layout() -> void:
 			)
 
 
+		for label in episode_card_labels:
+
+			label.add_theme_font_size_override(
+				"font_size",
+				20
+			)
+
+
 		back_button.custom_minimum_size = Vector2(
 			0,
 			58
@@ -868,9 +1055,10 @@ func _apply_responsive_layout() -> void:
 		episode_grid.columns = 4
 
 
+
 		main_box.size = Vector2(
 			1180,
-			560
+			500
 		)
 
 
@@ -879,7 +1067,10 @@ func _apply_responsive_layout() -> void:
 				viewport_size.x
 				- main_box.size.x
 			) / 2.0,
-			42
+			(
+				viewport_size.y
+				- main_box.size.y
+			) / 2.0
 		)
 
 
@@ -910,6 +1101,14 @@ func _apply_responsive_layout() -> void:
 
 
 			button.add_theme_font_size_override(
+				"font_size",
+				19
+			)
+
+
+		for label in episode_card_labels:
+
+			label.add_theme_font_size_override(
 				"font_size",
 				19
 			)

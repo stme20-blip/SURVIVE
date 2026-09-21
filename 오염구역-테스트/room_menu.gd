@@ -101,7 +101,7 @@ func _create_ui() -> void:
 		column.add_child(create_button)
 		_buttons.append(create_button)
 		var notice := Label.new()
-		notice.text = "※ 서버 생성 시 초대 코드가 지급됩니다. 최대 4명 참가 기능은 준비 중입니다. 서버 이름과 플레이 기록은 현재 기기에 저장됩니다."
+		notice.text = "※ 초대 코드로 최대 4명까지 참가할 수 있습니다. 게임 진행 동기화는 준비 중이며, 서버 이름과 플레이 기록은 현재 기기에 저장됩니다."
 		notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		notice.add_theme_color_override("font_color", Color("#acb7c5"))
 		column.add_child(notice)
@@ -256,37 +256,28 @@ func _on_create_room_pressed() -> void:
 	_create_button.disabled = true
 	_back_button.disabled = true
 	room_name_input.editable = false
-	status_label.text = "서버 생성 중입니다..."
+	status_label.text = "서버 정보를 준비 중입니다..."
 	var room_name := room_name_input.text.strip_edges()
 	if room_name.is_empty():
 		room_name = "새 플레이"
-	var result: Dictionary = await _room_service.create_room()
 	_creating = false
 	_back_button.disabled = false
-	if result.has("error"):
-		status_label.text = str(result.get("message", "서버 생성에 실패했습니다."))
-		_create_button.disabled = false
-		room_name_input.editable = true
-		return
-	var online: Dictionary = result.data.duplicate(true)
-	online["host_user_id"] = AuthManager.user_id
-	online["is_host"] = true
-	RoomManager.create_room(room_name, 4, online)
+	RoomManager.create_room(room_name, 4, {"pending_host_creation": true, "is_host": true, "local_user_id": AuthManager.user_id})
 	_created = true
-	_create_button.text = "서버 생성 완료"
-	status_label.text = "서버가 생성되었습니다. 초대 코드: %s\n코드로 참가하는 기능은 준비 중입니다." % online.invite_code
-	_continue_button.show()
 	if not RoomManager.save_current_room():
-		status_label.text += "\n로컬 저장에 실패했습니다. 저장 공간을 확인한 뒤 계속을 눌러 다시 저장해 주세요."
-
+		status_label.text = "로컬 저장에 실패했습니다. 저장 공간을 확인해 주세요."
+		return
+	var error := get_tree().change_scene_to_file("res://episode_select.tscn")
+	if error != OK:
+		status_label.text = "캐릭터 선택 화면을 열지 못했습니다. 다시 시도해 주세요."
 
 func _on_continue_pressed() -> void:
 	if not _created:
 		return
 	if not RoomManager.save_current_room():
-		status_label.text = "로컬 저장에 실패했습니다. 저장 공간을 확인해 주세요. 초대 코드: " + str(RoomManager.current_room.get("online_room", {}).get("invite_code", ""))
+		status_label.text = "로컬 저장에 실패했습니다. 저장 공간을 확인해 주세요."
 		return
-	var error := get_tree().change_scene_to_file("res://prologue.tscn")
+	var error := get_tree().change_scene_to_file("res://character_select.tscn")
 	if error != OK:
 		status_label.text = "다음 화면을 열지 못했습니다. 다시 계속을 눌러 주세요."
 
@@ -476,6 +467,9 @@ func _on_saved_room_pressed(
 		room_id
 	):
 		return
+	if RoomManager.has_active_online_room():
+		get_tree().change_scene_to_file("res://room_lobby.tscn")
+		return
 
 
 	var state: Dictionary = (
@@ -494,7 +488,7 @@ func _on_saved_room_pressed(
 	if character_id <= 0:
 
 		RoomManager.get_tree().change_scene_to_file(
-			"res://prologue.tscn"
+			"res://episode_select.tscn"
 		)
 
 		return

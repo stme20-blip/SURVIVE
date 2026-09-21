@@ -68,6 +68,11 @@ func _ready() -> void:
 
 func _on_feed_changed() -> void:
 
+	# 댓글 목록은 2초마다 동기화된다. 편집 입력창을 다시 만들면 서버의
+	# 기존 본문이 입력 중인 글을 덮어쓰므로, 편집이 끝날 때까지는 보류한다.
+	if not editing_comment_id.is_empty():
+		return
+
 	_refresh_feed()
 
 
@@ -192,7 +197,7 @@ func _submit_comment_after_ime() -> void:
 
 	message_input.clear()
 
-	RoomManager.add_comment(
+	await CommentSync.submit(
 		GameData.selected_name,
 		message
 	)
@@ -220,7 +225,7 @@ func _refresh_feed() -> void:
 	var feed: Array = RoomManager.get_feed()
 
 	if feed.is_empty():
-		_add_empty_message("아직 작성된 댓글이 없습니다.")
+		_add_empty_message("아직 작성한 기록이 없습니다.")
 		return
 
 	var previous_scene_title: String = ""
@@ -309,15 +314,27 @@ func _add_comment_entry(
 		RoomManager.can_edit_comment(entry)
 		and editing_comment_id != comment_id
 	):
+		var actions := HBoxContainer.new()
+		header.add_child(actions)
+		actions.add_theme_constant_override("separation", 0)
+		actions.size_flags_horizontal = Control.SIZE_SHRINK_END
+
 		var edit_button := Button.new()
-		header.add_child(edit_button)
+		actions.add_child(edit_button)
 		edit_button.text = "수정"
 		edit_button.flat = true
-		edit_button.custom_minimum_size = Vector2(44, 24)
+		edit_button.custom_minimum_size = Vector2(30, 24)
 		edit_button.add_theme_font_size_override("font_size", 11)
 		edit_button.pressed.connect(
 			_on_edit_pressed.bind(comment_id)
 		)
+		var delete_button := Button.new()
+		actions.add_child(delete_button)
+		delete_button.text = "삭제"
+		delete_button.flat = true
+		delete_button.custom_minimum_size = Vector2(30, 24)
+		delete_button.add_theme_font_size_override("font_size", 11)
+		delete_button.pressed.connect(_on_delete_pressed.bind(comment_id))
 
 	if editing_comment_id == comment_id:
 		var edit_input := LineEdit.new()
@@ -385,7 +402,8 @@ func _focus_edit_input(
 		return
 
 	edit_input.grab_focus()
-	edit_input.caret_column = 0
+	# 기존 문장을 바로 이어 고칠 수 있도록 커서를 마지막에 둔다.
+	edit_input.caret_column = edit_input.text.length()
 
 
 func _on_edit_save_pressed(
@@ -420,7 +438,7 @@ func _save_edit_after_ime(
 
 	editing_comment_id = ""
 
-	RoomManager.edit_comment(
+	await CommentSync.edit(
 		comment_id,
 		new_text
 	)
@@ -430,6 +448,27 @@ func _on_edit_cancel_pressed() -> void:
 
 	editing_comment_id = ""
 	_refresh_feed()
+
+
+func _on_delete_pressed(comment_id: String) -> void:
+	var dialog := ConfirmationDialog.new()
+	dialog.title = "기록 삭제"
+	dialog.dialog_text = "기록을 삭제하시겠습니까?\n복구할 수 없습니다."
+	dialog.ok_button_text = "삭제"
+	dialog.cancel_button_text = "취소"
+	dialog.min_size = Vector2(360, 170)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#202225")
+	style.border_color = Color(1, 1, 1, 0.32)
+	style.set_border_width_all(1)
+	style.set_content_margin_all(20)
+	dialog.add_theme_stylebox_override("panel", style)
+	dialog.add_theme_font_size_override("title_font_size", 22)
+	add_child(dialog)
+	dialog.confirmed.connect(func(): CommentSync.delete_comment(comment_id))
+	dialog.close_requested.connect(dialog.queue_free)
+	dialog.canceled.connect(dialog.queue_free)
+	dialog.popup_centered()
 
 
 # =========================================================

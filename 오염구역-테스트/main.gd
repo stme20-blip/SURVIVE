@@ -12,6 +12,8 @@ extends Control
 	get_node_or_null("DiscussionPanel")
 )
 
+const HOSPITAL_EXTERIOR_BACKGROUND := preload("res://hospital_exterior.png")
+
 
 # =========================================================
 # 플레이어
@@ -39,6 +41,9 @@ var current_dialogue_text: String = ""
 var current_options: Array = []
 
 var current_has_choice: bool = false
+var _first_dialogue_wait_reset_pending := true
+var _rich_text_wait_effect: RichTextWait
+var _dialogue_revision := 0
 
 # PC 대사 높이 재계산 중복 예약 방지
 var desktop_reflow_scheduled: bool = false
@@ -131,6 +136,26 @@ func _load_episode_dialogue_data() -> void:
 		"에피소드 Dialogue 로드: ",
 		dialogue_file
 	)
+	_apply_episode_background(dialogue_file)
+
+
+func _apply_episode_background(dialogue_file: String) -> void:
+	# Dialogue 1 and 2 share main.tscn's background node. Replace only that
+	# node's texture for the hospital episode; the graph itself remains unchanged.
+	if dialogue_file != "res://hospital_dialogue.tres":
+		return
+	if school_background is Sprite2D:
+		var background_sprite := school_background as Sprite2D
+		background_sprite.texture = HOSPITAL_EXTERIOR_BACKGROUND
+		# The hospital asset has a slightly different aspect ratio from the original
+		# school image. Cover the whole PC game area to prevent a one-pixel top seam.
+		var target_size := Vector2(1152.0, 648.0)
+		var source_size := HOSPITAL_EXTERIOR_BACKGROUND.get_size()
+		var cover_scale := maxf(target_size.x / source_size.x, target_size.y / source_size.y)
+		background_sprite.scale = Vector2(cover_scale, cover_scale)
+		background_sprite.position = target_size * 0.5
+	elif school_background is TextureRect:
+		(school_background as TextureRect).texture = HOSPITAL_EXTERIOR_BACKGROUND
 
 
 # =========================================================
@@ -258,12 +283,13 @@ const NORMAL_INSIGHT_SIZE := Vector2(
 )
 
 
-const DESKTOP_OPTION_HEIGHT := 46
+const DESKTOP_OPTION_HEIGHT := 40
 
 # PC 대화창은 아래쪽 기준선을 유지하고
 # 내용이 많아질수록 위쪽으로 자동 확장한다.
-const DESKTOP_DIALOGUE_BOTTOM := 600.0
+const DESKTOP_DIALOGUE_BOTTOM := 620.0
 const DESKTOP_DIALOGUE_MIN_HEIGHT := 150.0
+const DESKTOP_CHOICE_DIALOGUE_MIN_HEIGHT := 132.0
 const DESKTOP_DIALOGUE_MAX_HEIGHT := 380.0
 
 # 대사 영역 자체는 이 높이까지만 자동 확장.
@@ -271,7 +297,7 @@ const DESKTOP_DIALOGUE_MAX_HEIGHT := 380.0
 const DESKTOP_TEXT_MIN_HEIGHT := 44.0
 const DESKTOP_TEXT_MAX_HEIGHT := 190.0
 
-const DESKTOP_DIALOGUE_VERTICAL_PADDING := 18.0
+const DESKTOP_DIALOGUE_VERTICAL_PADDING := 14.0
 const DESKTOP_INSIGHT_GAP := 8.0
 
 
@@ -285,7 +311,7 @@ const MOBILE_GAP := 10.0
 const MOBILE_INSIGHT_HEIGHT := 54.0
 
 const MOBILE_PORTRAIT_WIDTH := 82.0
-const MOBILE_PORTRAIT_HEIGHT := 100.0
+const MOBILE_PORTRAIT_HEIGHT := 82.0
 
 # 모바일 대사 행의 최소 높이.
 # 실제 대사가 길면 이 값보다 자동으로 커진다.
@@ -295,6 +321,20 @@ const MOBILE_DIALOGUE_TEXT_MAX_HEIGHT := 220.0
 
 const MOBILE_OPTION_HEIGHT := 58.0
 const MOBILE_OPTION_GAP := 8.0
+
+
+# 원본 파일은 바꾸지 않고, 지정 기본 초상화가 게임에 표시될 때만 가장자리를 부드럽게 어둡게 한다.
+const FEATURED_PORTRAIT_VIGNETTE_SHADER := """
+shader_type canvas_item;
+
+void fragment() {
+	vec4 color = texture(TEXTURE, UV);
+	float distance_from_center = length(UV - vec2(0.5)) * 1.41421356;
+	float vignette = smoothstep(0.44, 0.98, distance_from_center);
+	color.rgb *= mix(1.0, 0.22, vignette);
+	COLOR = color;
+}
+"""
 
 
 # =========================================================
@@ -348,6 +388,7 @@ func _ready() -> void:
 	_create_episode_back_button()
 
 	_create_mobile_ui()
+	_update_portrait_vignettes()
 
 
 	portrait_box.visible = false
@@ -376,6 +417,9 @@ func _ready() -> void:
 	dialogue_box.option_selected.connect(
 		_on_dialogue_option_selected
 	)
+	dialogue_box.gui_input.connect(_on_dialogue_box_gui_input)
+
+	_connect_first_dialogue_wait_debug()
 
 
 	# =====================================================
@@ -414,6 +458,74 @@ func _on_room_feed_changed() -> void:
 	if ScreenLayout.is_mobile_portrait():
 
 		_refresh_mobile_feed()
+
+
+func _on_dialogue_box_gui_input(event: InputEvent) -> void:
+	_try_skip_dialogue_with_click(event)
+
+
+func _input(event: InputEvent) -> void:
+	# Receive clicks before UI controls consume them, matching DialogueBox's ESC path.
+	_try_skip_dialogue_with_click(event)
+
+
+func _try_skip_dialogue_with_click(event: InputEvent) -> void:
+	if not event is InputEventMouseButton:
+		return
+	if event.button_index != MOUSE_BUTTON_LEFT or not event.pressed:
+		return
+	# 설정/참가자 UI 클릭은 대사 스킵보다 먼저 보장한다.
+	if SettingsOverlay.is_pointer_over_interactive_control(event.position):
+		return
+	if not dialogue_box.is_running() or _rich_text_wait_effect == null or _rich_text_wait_effect.finished:
+		return
+	# Never consume a press intended for an already-visible desktop option.
+	if not ScreenLayout.is_mobile_portrait() and dialogue_box.options_container.visible:
+		return
+	if ScreenLayout.is_mobile_portrait() and _is_click_on_mobile_option(event.position):
+		return
+	_rich_text_wait_effect.skip = true
+	get_viewport().set_input_as_handled()
+	call_deferred("_finish_click_skip_after_frame")
+
+
+func _finish_click_skip_after_frame() -> void:
+	await get_tree().process_frame
+	if current_has_choice and not dialogue_box.options_container.visible:
+		dialogue_box.options_container.show()
+		if dialogue_box.options_container.get_child_count() > 0:
+			var first_option: Node = dialogue_box.options_container.get_child(0)
+			if first_option is Button:
+				(first_option as Button).grab_focus()
+
+
+func _connect_first_dialogue_wait_debug() -> void:
+	for effect in dialogue_box.custom_effects:
+		if effect is RichTextWait:
+			_rich_text_wait_effect = effect as RichTextWait
+			if not _rich_text_wait_effect.wait_finished.is_connected(_on_first_dialogue_wait_finished):
+				_rich_text_wait_effect.wait_finished.connect(_on_first_dialogue_wait_finished)
+			return
+	print("[first-dialogue] RichTextWait effect was not found")
+
+
+func _prepare_first_dialogue_wait() -> void:
+	if not _first_dialogue_wait_reset_pending:
+		return
+	_first_dialogue_wait_reset_pending = false
+	if _rich_text_wait_effect == null:
+		print("[first-dialogue] no RichTextWait state to reset")
+		return
+	print("[first-dialogue] reset wait; finished=", _rich_text_wait_effect.finished, "; displayed=", _rich_text_wait_effect.displayed.size(), "; options_visible=", dialogue_box.options_container.visible)
+	_rich_text_wait_effect.finished = false
+	_rich_text_wait_effect.skip = false
+	_rich_text_wait_effect.displayed.clear()
+
+
+func _on_first_dialogue_wait_finished() -> void:
+	if not current_has_choice:
+		return
+	print("[first-dialogue] wait_finished; options_visible=", dialogue_box.options_container.visible)
 
 
 # =========================================================
@@ -504,6 +616,7 @@ func _refresh_character_settings() -> void:
 	_load_selected_character()
 	portrait_texture.texture = player_portrait
 	mobile_portrait_texture.texture = player_portrait
+	_update_portrait_vignettes()
 	name_label.text = player_name
 
 
@@ -534,6 +647,26 @@ func _load_selected_character() -> void:
 			) as Texture2D
 
 
+func _update_portrait_vignettes() -> void:
+
+	if portrait_texture == null or mobile_portrait_texture == null:
+		return
+
+	var portrait_path := GameData.selected_portrait_path
+	var use_vignette := portrait_path.ends_with("kim_soleum_portrait.png") or portrait_path.ends_with("baek_saheon_portrait.png")
+	portrait_texture.material = _create_portrait_vignette_material() if use_vignette else null
+	mobile_portrait_texture.material = _create_portrait_vignette_material() if use_vignette else null
+
+
+func _create_portrait_vignette_material() -> ShaderMaterial:
+
+	var shader := Shader.new()
+	shader.code = FEATURED_PORTRAIT_VIGNETTE_SHADER
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	return material
+
+
 # =========================================================
 # PC 초상화
 # =========================================================
@@ -545,6 +678,7 @@ func _create_desktop_portrait() -> void:
 	add_child(
 		portrait_box
 	)
+	portrait_box.clip_contents = true
 
 
 	var frame_style := StyleBoxFlat.new()
@@ -557,9 +691,9 @@ func _create_desktop_portrait() -> void:
 	)
 
 	frame_style.border_color = Color(
-		0.75,
-		0.78,
-		0.80,
+		0.0,
+		0.0,
+		0.0,
 		1.0
 	)
 
@@ -605,7 +739,7 @@ func _create_desktop_portrait() -> void:
 	)
 
 	portrait_texture.texture_filter = (
-		CanvasItem.TEXTURE_FILTER_NEAREST
+		CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	)
 	var portrait_background := ColorRect.new()
 	portrait_background.color = Color("#202224")
@@ -1323,9 +1457,9 @@ func _create_mobile_dialogue() -> void:
 
 
 	portrait_style.border_color = Color(
-		0.45,
-		0.48,
-		0.50,
+		0.0,
+		0.0,
+		0.0,
 		1.0
 	)
 
@@ -1377,7 +1511,7 @@ func _create_mobile_dialogue() -> void:
 
 
 	mobile_portrait_texture.texture_filter = (
-		CanvasItem.TEXTURE_FILTER_NEAREST
+		CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	)
 	var portrait_background := ColorRect.new()
 	portrait_background.color = Color("#202224")
@@ -1926,6 +2060,7 @@ func _on_dialogue_processed(
 	_dialogue,
 	options
 ) -> void:
+	_dialogue_revision += 1
 	if _settings_refresh_pending:
 		_refresh_character_settings()
 
@@ -2001,6 +2136,9 @@ func _on_dialogue_processed(
 			current_has_choice = true
 			break
 
+	if current_has_choice:
+		call_deferred("_repair_first_choice_options_after_wait", _dialogue_revision)
+
 
 	# =====================================================
 	# 새 Dialogue 화면이므로 이전 Insight는 우선 비운다.
@@ -2031,6 +2169,41 @@ func _on_dialogue_processed(
 	# RichTextLabel의 실제 줄바꿈 높이는
 	# 레이아웃이 한 프레임 처리된 뒤 가장 정확하다.
 	_schedule_desktop_reflow()
+
+
+func _repair_first_choice_options_after_wait(revision: int) -> void:
+	# RichTextLabel can complete a wait while DialogueBox is still inside
+	# _on_dialogue_processed(), before that method hides the option container.
+	# This also covers a dialogue restored through the "previous" replay path.
+	await get_tree().process_frame
+	if revision != _dialogue_revision or not current_has_choice:
+		return
+	if _rich_text_wait_effect != null and not _rich_text_wait_effect.finished:
+		# DialogueParser can calculate a final wait index that does not match the
+		# RichTextLabel's index around line breaks. Wait for the normal reveal time
+		# before recovering the first choice; this never reveals options immediately.
+		var reveal_seconds := maxf(0.35, float(current_dialogue_text.length()) / 50.0 + 0.35)
+		print("[first-dialogue] wait_finished missing; watching natural reveal for ", reveal_seconds, " seconds")
+		await get_tree().create_timer(reveal_seconds).timeout
+		if revision != _dialogue_revision or not current_has_choice:
+			return
+	if dialogue_box.options_container.visible:
+		return
+	print("[first-dialogue] restoring first options after natural reveal")
+	dialogue_box.options_container.show()
+	if dialogue_box.options_container.get_child_count() > 0:
+		var first_option: Node = dialogue_box.options_container.get_child(0)
+		if first_option is Button:
+			(first_option as Button).grab_focus()
+
+
+func _is_click_on_mobile_option(point: Vector2) -> bool:
+	if mobile_options_container == null:
+		return false
+	for child in mobile_options_container.get_children():
+		if child is Control and (child as Control).visible and (child as Control).get_global_rect().has_point(point):
+			return true
+	return false
 
 
 # =========================================================
@@ -3025,7 +3198,7 @@ func _submit_mobile_comment_after_ime() -> void:
 	mobile_message_input.clear()
 
 
-	RoomManager.add_comment(
+	await CommentSync.submit(
 		GameData.selected_name,
 		message
 	)
@@ -3072,7 +3245,7 @@ func _refresh_mobile_feed() -> void:
 	if feed.is_empty():
 
 		_add_mobile_empty_message(
-			"아직 작성된 댓글이 없습니다."
+			"아직 작성한 기록이 없습니다."
 		)
 
 		return
@@ -3225,6 +3398,13 @@ func _add_mobile_comment(
 		edit_button.pressed.connect(
 			_on_mobile_edit_pressed.bind(comment_id)
 		)
+		var delete_button := Button.new()
+		header.add_child(delete_button)
+		delete_button.text = "삭제"
+		delete_button.flat = true
+		delete_button.custom_minimum_size = Vector2(58, 30)
+		delete_button.add_theme_font_size_override("font_size", 14)
+		delete_button.pressed.connect(_on_mobile_delete_pressed.bind(comment_id))
 
 	if mobile_editing_comment_id == comment_id:
 		var edit_input := LineEdit.new()
@@ -3331,7 +3511,7 @@ func _save_mobile_edit_after_ime(
 
 	mobile_editing_comment_id = ""
 
-	RoomManager.edit_comment(
+	await CommentSync.edit(
 		comment_id,
 		new_text
 	)
@@ -3341,6 +3521,25 @@ func _on_mobile_edit_cancel_pressed() -> void:
 
 	mobile_editing_comment_id = ""
 	_refresh_mobile_feed()
+
+
+func _on_mobile_delete_pressed(comment_id: String) -> void:
+	var dialog := ConfirmationDialog.new()
+	dialog.title = "기록 삭제"
+	dialog.dialog_text = "기록을 삭제하시겠습니까?\n복구할 수 없습니다."
+	dialog.ok_button_text = "삭제"
+	dialog.cancel_button_text = "취소"
+	dialog.min_size = Vector2(440, 210)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#202225")
+	style.border_color = Color(1, 1, 1, 0.32)
+	style.set_border_width_all(1)
+	style.set_content_margin_all(24)
+	dialog.add_theme_stylebox_override("panel", style)
+	dialog.add_theme_font_size_override("title_font_size", 26)
+	add_child(dialog)
+	dialog.confirmed.connect(func(): CommentSync.delete_comment(comment_id))
+	dialog.popup_centered()
 
 
 # =========================================================
@@ -3644,7 +3843,7 @@ func _get_desktop_dialogue_required_height() -> float:
 
 	return clamp(
 		required_height,
-		DESKTOP_DIALOGUE_MIN_HEIGHT,
+		DESKTOP_CHOICE_DIALOGUE_MIN_HEIGHT if current_has_choice else DESKTOP_DIALOGUE_MIN_HEIGHT,
 		DESKTOP_DIALOGUE_MAX_HEIGHT
 	)
 
@@ -4227,6 +4426,7 @@ func _start_or_restore_dialogue() -> void:
 	if history.is_empty():
 
 		is_restoring_dialogue = false
+		_prepare_first_dialogue_wait()
 
 
 		dialogue_box.start(
