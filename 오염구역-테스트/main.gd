@@ -223,6 +223,13 @@ var mobile_download_button: Button
 
 var mobile_editing_comment_id: String = ""
 
+# Godot's experimental Web virtual keyboard can fail to initialize while a
+# phone is already in portrait mode, and it drops some non-composition input.
+# Keep a browser input bridge for the mobile survival-record fields instead.
+var _mobile_web_input_bridge: JavaScriptObject
+var _mobile_web_input_callback: JavaScriptObject
+var _mobile_web_active_input: LineEdit
+
 
 # =========================================================
 # PC 위치
@@ -1753,6 +1760,10 @@ func _create_mobile_discussion() -> void:
 	mobile_message_input.placeholder_text = (
 		"대사 또는 기록 입력"
 	)
+	mobile_message_input.virtual_keyboard_enabled = false
+	mobile_message_input.gui_input.connect(
+		_on_mobile_comment_input_gui_input.bind(mobile_message_input)
+	)
 
 
 	mobile_message_input.add_theme_font_size_override(
@@ -1764,6 +1775,8 @@ func _create_mobile_discussion() -> void:
 	mobile_message_input.text_submitted.connect(
 		_on_mobile_message_submitted
 	)
+
+	_setup_mobile_web_input_bridge()
 
 
 	# -----------------------------------------------------
@@ -1791,6 +1804,105 @@ func _create_mobile_discussion() -> void:
 	mobile_submit_button.pressed.connect(
 		_on_mobile_submit_pressed
 	)
+
+
+# =========================================================
+# Mobile web text input bridge
+# =========================================================
+
+func _setup_mobile_web_input_bridge() -> void:
+
+	if not OS.has_feature("web"):
+		return
+
+	if _mobile_web_input_bridge != null:
+		return
+
+	_mobile_web_input_callback = JavaScriptBridge.create_callback(
+		_on_mobile_web_input_changed
+	)
+
+	var browser_window := JavaScriptBridge.get_interface("window")
+	browser_window.__surviveMobileTextChanged = _mobile_web_input_callback
+
+	JavaScriptBridge.eval("""
+		if (!window.surviveMobileText) {
+			const field = document.createElement('input');
+			field.type = 'text';
+			field.inputMode = 'text';
+			field.autocomplete = 'off';
+			field.autocorrect = 'on';
+			field.autocapitalize = 'sentences';
+			field.spellcheck = false;
+			field.setAttribute('aria-hidden', 'true');
+			Object.assign(field.style, {
+				position: 'fixed', left: '0', bottom: '0', width: '2px', height: '2px',
+				opacity: '0.01', border: '0', padding: '0', margin: '0', zIndex: '2147483647'
+			});
+			document.body.appendChild(field);
+			const sendValue = () => {
+				if (window.__surviveMobileTextChanged) window.__surviveMobileTextChanged(field.value);
+			};
+			field.addEventListener('input', sendValue);
+			field.addEventListener('change', sendValue);
+			window.surviveMobileText = {
+				open(value) {
+					field.value = value || '';
+					field.focus({ preventScroll: true });
+					field.setSelectionRange(field.value.length, field.value.length);
+				},
+				close() { field.blur(); }
+			};
+		}
+	""", true)
+
+	_mobile_web_input_bridge = JavaScriptBridge.get_interface("surviveMobileText")
+
+
+func _on_mobile_comment_input_gui_input(
+	event: InputEvent,
+	input: LineEdit
+) -> void:
+
+	if event is InputEventScreenTouch and event.pressed:
+		_open_mobile_web_input(input)
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_open_mobile_web_input(input)
+
+
+func _open_mobile_web_input(input: LineEdit) -> void:
+
+	if not OS.has_feature("web"):
+		return
+
+	if not is_instance_valid(input):
+		return
+
+	_setup_mobile_web_input_bridge()
+
+	if _mobile_web_input_bridge == null:
+		return
+
+	_mobile_web_active_input = input
+	input.grab_focus()
+	_mobile_web_input_bridge.open(input.text)
+
+
+func _on_mobile_web_input_changed(args: Array) -> void:
+
+	if args.is_empty() or not is_instance_valid(_mobile_web_active_input):
+		return
+
+	_mobile_web_active_input.text = str(args[0])
+	_mobile_web_active_input.caret_column = _mobile_web_active_input.text.length()
+
+
+func _close_mobile_web_input() -> void:
+
+	if _mobile_web_input_bridge != null:
+		_mobile_web_input_bridge.close()
+
+	_mobile_web_active_input = null
 
 
 # =========================================================
@@ -3156,6 +3268,7 @@ func _on_mobile_message_submitted(
 	_text: String
 ) -> void:
 
+	_close_mobile_web_input()
 	mobile_message_input.apply_ime()
 
 
@@ -3170,6 +3283,7 @@ func _on_mobile_message_submitted(
 
 func _on_mobile_submit_pressed() -> void:
 
+	_close_mobile_web_input()
 	mobile_message_input.apply_ime()
 
 
@@ -3409,6 +3523,10 @@ func _add_mobile_comment(
 	if mobile_editing_comment_id == comment_id:
 		var edit_input := LineEdit.new()
 		box.add_child(edit_input)
+		edit_input.virtual_keyboard_enabled = false
+		edit_input.gui_input.connect(
+			_on_mobile_comment_input_gui_input.bind(edit_input)
+		)
 		edit_input.text = text
 		edit_input.custom_minimum_size = Vector2(0, 48)
 		edit_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -3488,6 +3606,7 @@ func _on_mobile_edit_save_pressed(
 	if not is_instance_valid(edit_input):
 		return
 
+	_close_mobile_web_input()
 	edit_input.apply_ime()
 	call_deferred(
 		"_save_mobile_edit_after_ime",
