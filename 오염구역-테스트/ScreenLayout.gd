@@ -65,6 +65,12 @@ func _on_viewport_size_changed() -> void:
 	if _applying:
 		return
 
+	# On mobile Web, opening the browser keyboard can resize the canvas even
+	# though the device has not rotated. Keep the already-selected portrait
+	# layout until a fresh page load rather than switching to desktop layout.
+	if OS.has_feature("web") and mobile_portrait:
+		return
+
 	call_deferred(
 		"_apply_layout"
 	)
