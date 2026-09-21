@@ -111,7 +111,7 @@ func _create_ui() -> void:
 	panel.add_child(title)
 	title.position = Vector2(20, 18)
 	title.size = Vector2(344, 38)
-	title.text = "토론 기록"
+	title.text = "생존 기록"
 	title.add_theme_font_size_override("font_size", 22)
 
 	download_button = Button.new()
@@ -126,7 +126,7 @@ func _create_ui() -> void:
 	panel.add_child(subtitle)
 	subtitle.position = Vector2(20, 54)
 	subtitle.size = Vector2(344, 25)
-	subtitle.text = "이 방에서 작성한 모든 댓글이 기록됩니다."
+	subtitle.text = "서버에서 작성한 모든 댓글이 기록됩니다."
 	subtitle.modulate = Color(0.65, 0.68, 0.72, 1.0)
 	subtitle.add_theme_font_size_override("font_size", 12)
 
@@ -149,7 +149,7 @@ func _create_ui() -> void:
 	panel.add_child(message_input)
 	message_input.position = Vector2(20, 582)
 	message_input.size = Vector2(270, 42)
-	message_input.placeholder_text = "댓글 입력..."
+	message_input.placeholder_text = "대사 또는 기록 입력"
 	message_input.text_submitted.connect(_on_message_submitted)
 
 	submit_button = Button.new()
@@ -323,8 +323,20 @@ func _add_comment_entry(
 		var edit_input := LineEdit.new()
 		box.add_child(edit_input)
 		edit_input.text = text
-		edit_input.custom_minimum_size = Vector2(315, 38)
-		edit_input.caret_column = edit_input.text.length()
+		edit_input.custom_minimum_size = Vector2(0, 38)
+		edit_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		edit_input.expand_to_text_length = false
+		var edit_style := StyleBoxFlat.new()
+		edit_style.bg_color = Color("#121212")
+		edit_style.border_color = Color(1, 1, 1, 0.35)
+		edit_style.set_border_width_all(1)
+		edit_style.content_margin_left = 8
+		edit_style.content_margin_right = 8
+		edit_input.add_theme_stylebox_override("normal", edit_style)
+		var focus_style := edit_style.duplicate() as StyleBoxFlat
+		focus_style.draw_center = false
+		focus_style.border_color = Color(1, 1, 1, 0.7)
+		edit_input.add_theme_stylebox_override("focus", focus_style)
 
 		var button_row := HBoxContainer.new()
 		box.add_child(button_row)
@@ -373,7 +385,7 @@ func _focus_edit_input(
 		return
 
 	edit_input.grab_focus()
-	edit_input.caret_column = edit_input.text.length()
+	edit_input.caret_column = 0
 
 
 func _on_edit_save_pressed(

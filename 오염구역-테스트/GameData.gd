@@ -1,5 +1,7 @@
 extends Node
 
+signal character_settings_changed(personality_changed: bool)
+
 
 # =========================================================
 # 캐릭터 ID

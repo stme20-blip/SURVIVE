@@ -83,7 +83,7 @@ func create_room(
 	max_players = clamp(
 		max_players,
 		1,
-		3
+		4
 	)
 
 
@@ -742,6 +742,43 @@ func get_saved_rooms() -> Array:
 # 방 삭제
 # =========================================================
 
+func rename_room(room_id: String, new_name: String) -> bool:
+	new_name = new_name.strip_edges()
+	if new_name.is_empty() or room_id.is_empty() or room_id.get_file() != room_id or room_id.contains(":"):
+		return false
+	var path := SAVE_DIR + room_id + ".json"
+	var source := FileAccess.open(path, FileAccess.READ)
+	if source == null:
+		return false
+	var parsed = JSON.parse_string(source.get_as_text())
+	source.close()
+	if not parsed is Dictionary or str(parsed.get("room_id", "")) != room_id:
+		return false
+	# Rename only: preserve progress, timestamps, and the active room selection.
+	parsed["room_name"] = new_name
+	var temporary_path := path + ".rename_tmp"
+	var output := FileAccess.open(temporary_path, FileAccess.WRITE)
+	if output == null:
+		return false
+	output.store_string(JSON.stringify(parsed, "\t"))
+	output.flush()
+	var write_error := output.get_error()
+	output.close()
+	if write_error != OK:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(temporary_path))
+		return false
+	var error := DirAccess.rename_absolute(
+		ProjectSettings.globalize_path(temporary_path),
+		ProjectSettings.globalize_path(path)
+	)
+	if error != OK:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(temporary_path))
+		return false
+	if str(current_room.get("room_id", "")) == room_id:
+		current_room["room_name"] = new_name
+	return true
+
+
 func delete_room(
 	room_id: String
 ) -> bool:
@@ -1013,10 +1050,18 @@ func set_selected_character(
 	character_name: String,
 	portrait_path: String,
 	personality: String
-) -> void:
+) -> bool:
 
 	if current_room.is_empty():
-		return
+		return false
+	if not personality in SETTINGS_PERSONALITIES:
+		return false
+	var old_member := get_local_member()
+	var previous_trait := str(old_member.get("personality", ""))
+	var trait_changed := not previous_trait.is_empty() and previous_trait != personality
+	if trait_changed and get_personality_changes_remaining() == 0:
+		return false
+	var before := current_room.duplicate(true)
 
 
 	var state: Dictionary = (
@@ -1072,6 +1117,8 @@ func set_selected_character(
 		member["personality"] = (
 			personality
 		)
+		if trait_changed:
+			member["personality_changes_used"] = int(old_member.get("personality_changes_used", 0)) + 1
 
 
 		members[idx] = member
@@ -1083,7 +1130,10 @@ func set_selected_character(
 	current_room["members"] = members
 
 
-	save_current_room()
+	if not save_current_room():
+		current_room = before
+		return false
+	return true
 
 
 func get_local_member() -> Dictionary:
@@ -1113,6 +1163,72 @@ func get_local_member() -> Dictionary:
 
 
 	return {}
+
+
+const PERSONALITY_CHANGE_LIMIT := 3
+const SETTINGS_PERSONALITIES := ["CALM", "CAUTIOUS", "CURIOUS", "DIRECT", "TIMID"]
+
+
+func get_personality_changes_remaining() -> int:
+	return clampi(PERSONALITY_CHANGE_LIMIT - int(get_local_member().get("personality_changes_used", 0)), 0, PERSONALITY_CHANGE_LIMIT)
+
+
+func apply_character_settings(character_name: String, personality: String, portrait: Image = null) -> String:
+	var member := get_local_member()
+	if member.is_empty() or int(member.get("character_id", 0)) <= 0 or str(member.get("personality", "")).is_empty():
+		return "먼저 캐릭터와 특성을 설정해 주세요."
+	character_name = character_name.strip_edges()
+	if character_name.is_empty() or character_name.length() > 20:
+		return "이름은 1~20자로 입력해 주세요."
+	if not personality in SETTINGS_PERSONALITIES:
+		return "특성을 선택해 주세요."
+	var changed := personality != str(member.get("personality", ""))
+	if changed and get_personality_changes_remaining() <= 0:
+		return "이번 플레이의 특성 변경 3회를 모두 사용했습니다."
+	var portrait_path := str(member.get("portrait_path", ""))
+	var new_portrait_path := ""
+	if portrait != null:
+		if portrait.is_empty():
+			return "이미지를 불러오지 못했습니다."
+		var image := portrait.duplicate() as Image
+		var longest := maxi(image.get_width(), image.get_height())
+		if longest > 1024:
+			var ratio := 1024.0 / float(longest)
+			image.resize(maxi(1, int(image.get_width() * ratio)), maxi(1, int(image.get_height() * ratio)), Image.INTERPOLATE_LANCZOS)
+		var directory := "user://custom_portraits/"
+		if DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(directory)) != OK:
+			return "초상화 저장 폴더를 만들 수 없습니다."
+		new_portrait_path = directory + "settings_" + str(Time.get_ticks_usec()) + ".png"
+		if image.save_png(new_portrait_path) != OK:
+			return "초상화를 저장하지 못했습니다."
+		portrait_path = new_portrait_path
+	var updated := current_room.duplicate(true)
+	for local_member in updated.get("members", []):
+		if str(local_member.get("member_id", "")) == LOCAL_MEMBER_ID:
+			local_member["character_name"] = character_name
+			local_member["portrait_path"] = portrait_path
+			local_member["personality"] = personality
+			local_member["personality_changes_used"] = int(member.get("personality_changes_used", 0)) + (1 if changed else 0)
+	updated["updated_at"] = _get_current_time()
+	var path := SAVE_DIR + get_current_room_id() + ".json"
+	var temporary_path := path + ".settings_tmp"
+	var output := FileAccess.open(temporary_path, FileAccess.WRITE)
+	var error := FileAccess.get_open_error()
+	if output != null:
+		output.store_string(JSON.stringify(updated, "\t"))
+		output.flush()
+		error = output.get_error()
+		output.close()
+		if error == OK:
+			error = DirAccess.rename_absolute(ProjectSettings.globalize_path(temporary_path), ProjectSettings.globalize_path(path))
+	if error != OK:
+		if FileAccess.file_exists(temporary_path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(temporary_path))
+		if not new_portrait_path.is_empty():
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(new_portrait_path))
+		return "설정을 저장하지 못했습니다. 다시 시도해 주세요."
+	current_room = updated
+	return ""
 
 
 func get_local_member_id() -> String:

@@ -89,34 +89,52 @@ func _create_ui() -> void:
 
 
 	# 새 게임
+	var game_buttons := HBoxContainer.new()
+	game_buttons.add_theme_constant_override("separation", 12)
+	menu.add_child(game_buttons)
 	var start_button := Button.new()
-	menu.add_child(start_button)
+	game_buttons.add_child(start_button)
 
 	start_button.text = "새 게임"
-	start_button.custom_minimum_size = Vector2(420, 54)
+	start_button.custom_minimum_size = Vector2(0, 54)
+	start_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	start_button.pressed.connect(
 		_on_start_pressed
 	)
+	var load_button := Button.new()
+	game_buttons.add_child(load_button)
+	load_button.text = "불러오기"
+	load_button.custom_minimum_size = Vector2(0, 54)
+	load_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	load_button.pressed.connect(_on_load_pressed)
 
+	var invite_notice := AcceptDialog.new()
+	invite_notice.title = "초대 코드"
+	invite_notice.dialog_text = "초대 코드 기능은 준비 중입니다."
+	invite_notice.ok_button_text = "확인"
+	add_child(invite_notice)
 
-	# 종료
-	var quit_button := Button.new()
-	menu.add_child(quit_button)
-
-	quit_button.text = "종료"
-	quit_button.custom_minimum_size = Vector2(420, 54)
-
-	quit_button.pressed.connect(
-		_on_quit_pressed
+	var invite_link := LinkButton.new()
+	invite_link.text = "초대 코드 입력 >"
+	invite_link.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	invite_link.underline = LinkButton.UNDERLINE_MODE_ON_HOVER
+	invite_link.pressed.connect(func() -> void:
+		# Connect the invitation page here when the feature is available.
+		invite_notice.popup_centered()
 	)
+	menu.add_child(invite_link)
+
+
 
 
 func _on_start_pressed() -> void:
+	get_tree().set_meta("room_menu_show_saved", false)
 	get_tree().change_scene_to_file(
 		"res://room_menu.tscn"
 	)
 
 
-func _on_quit_pressed() -> void:
-	get_tree().quit()
+func _on_load_pressed() -> void:
+	get_tree().set_meta("room_menu_show_saved", true)
+	get_tree().change_scene_to_file("res://room_menu.tscn")

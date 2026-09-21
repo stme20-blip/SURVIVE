@@ -1,652 +1,237 @@
 extends Control
 
-
-var panel: Panel
-
-var title_label: Label
-var new_room_title: Label
-
-var room_name_label: Label
 var room_name_input: LineEdit
-
-var player_label: Label
-var player_count_option: OptionButton
-
-var create_button: Button
-
-var separator: HSeparator
-var saved_title: Label
-var saved_scroll: ScrollContainer
 var saved_rooms_container: VBoxContainer
-
+var saved_scroll: ScrollContainer
 var status_label: Label
-
 var delete_confirm_dialog: ConfirmationDialog
+var _delete_message: Label
 var pending_delete_room_id: String = ""
+var show_saved: bool = false
+var _margin: MarginContainer
+var _heading: Label
+var _buttons: Array[Button] = []
+var _back_button: Button
+var _rename_dialog: ConfirmationDialog
+var _rename_input: LineEdit
+var _rename_error: Label
+var _pending_rename_id: String = ""
 
 
 func _ready() -> void:
-
+	show_saved = bool(get_tree().get_meta("room_menu_show_saved", false))
+	if get_tree().has_meta("room_menu_show_saved"):
+		get_tree().remove_meta("room_menu_show_saved")
 	_create_ui()
-
-	ScreenLayout.layout_changed.connect(
-		_on_layout_changed
-	)
-
-	call_deferred(
-		"_apply_layout"
-	)
-
-	_refresh_saved_rooms()
+	ScreenLayout.layout_changed.connect(_on_layout_changed)
+	resized.connect(_on_layout_changed)
+	_apply_layout()
 
 
 func _on_layout_changed() -> void:
-
-	call_deferred(
-		"_apply_layout"
-	)
+	call_deferred("_apply_layout")
 
 
 func _create_ui() -> void:
-
+	theme = Theme.new()
+	theme.default_font = preload("res://fonts/Pretendard-Regular.otf")
 	var background := ColorRect.new()
+	background.color = Color(0.025, 0.030, 0.035, 1.0)
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(background)
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
-	add_child(
-		background
-	)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	add_child(scroll)
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_margin = MarginContainer.new()
+	_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_margin)
+	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 18)
+	_margin.add_child(column)
 
-	background.set_anchors_and_offsets_preset(
-		Control.PRESET_FULL_RECT
-	)
+	_heading = Label.new()
+	_heading.text = "저장된 서버" if show_saved else "신규 서버 생성"
+	column.add_child(_heading)
 
-	background.color = Color(
-		0.025,
-		0.030,
-		0.035,
-		1.0
-	)
+	if show_saved:
+		var saved_box := PanelContainer.new()
+		var box_style := StyleBoxFlat.new()
+		box_style.bg_color = Color(0.0, 0.0, 0.0, 0.45)
+		box_style.border_color = Color(1.0, 1.0, 1.0, 0.25)
+		box_style.set_border_width_all(1)
+		box_style.content_margin_left = 16
+		box_style.content_margin_right = 16
+		box_style.content_margin_top = 16
+		box_style.content_margin_bottom = 16
+		saved_box.add_theme_stylebox_override("panel", box_style)
+		column.add_child(saved_box)
+		saved_scroll = ScrollContainer.new()
+		saved_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		saved_scroll.follow_focus = true
+		saved_box.add_child(saved_scroll)
+		saved_rooms_container = VBoxContainer.new()
+		saved_rooms_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		saved_rooms_container.add_theme_constant_override("separation", 8)
+		saved_scroll.add_child(saved_rooms_container)
+	else:
+		var name_label := Label.new()
+		name_label.text = "서버 이름"
+		column.add_child(name_label)
+		room_name_input = LineEdit.new()
+		room_name_input.placeholder_text = "예: 첫 번째 플레이"
+		room_name_input.expand_to_text_length = false
+		column.add_child(room_name_input)
+		var create_button := Button.new()
+		create_button.text = "새로운 서버 만들기"
+		create_button.pressed.connect(_on_create_room_pressed)
+		column.add_child(create_button)
+		_buttons.append(create_button)
+		var notice := Label.new()
+		notice.text = "※ 서버 생성 후 지급되는 초대 코드 입력 시 최대 4명까지 멀티 플레이가 가능합니다."
+		notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		notice.add_theme_color_override("font_color", Color("#acb7c5"))
+		column.add_child(notice)
 
-
-	panel = Panel.new()
-
-	add_child(
-		panel
-	)
-
-
-	var panel_style := StyleBoxFlat.new()
-
-	panel_style.bg_color = Color(
-		0.055,
-		0.058,
-		0.065,
-		1.0
-	)
-
-	panel_style.corner_radius_top_left = 4
-	panel_style.corner_radius_top_right = 4
-	panel_style.corner_radius_bottom_left = 4
-	panel_style.corner_radius_bottom_right = 4
-
-
-	panel.add_theme_stylebox_override(
-		"panel",
-		panel_style
-	)
-
-
-	title_label = Label.new()
-
-	panel.add_child(
-		title_label
-	)
-
-	title_label.text = "게임 방"
-
-	title_label.horizontal_alignment = (
-		HORIZONTAL_ALIGNMENT_CENTER
-	)
-
-
-	new_room_title = Label.new()
-
-	panel.add_child(
-		new_room_title
-	)
-
-	new_room_title.text = (
-		"새 방 만들기"
-	)
-
-
-	room_name_label = Label.new()
-
-	panel.add_child(
-		room_name_label
-	)
-
-	room_name_label.text = "방 이름"
-
-
-	room_name_input = LineEdit.new()
-
-	panel.add_child(
-		room_name_input
-	)
-
-	room_name_input.placeholder_text = (
-		"예: 첫 번째 플레이"
-	)
-
-
-	player_label = Label.new()
-
-	panel.add_child(
-		player_label
-	)
-
-	player_label.text = "최대 인원"
-
-
-	player_count_option = OptionButton.new()
-
-	panel.add_child(
-		player_count_option
-	)
-
-	player_count_option.add_item(
-		"1인",
-		1
-	)
-
-	player_count_option.add_item(
-		"2인",
-		2
-	)
-
-	player_count_option.add_item(
-		"3인",
-		3
-	)
-
-
-	create_button = Button.new()
-
-	panel.add_child(
-		create_button
-	)
-
-	create_button.text = "방 만들기"
-
-	create_button.pressed.connect(
-		_on_create_room_pressed
-	)
-
-
-	separator = HSeparator.new()
-
-	panel.add_child(
-		separator
-	)
-
-
-	saved_title = Label.new()
-
-	panel.add_child(
-		saved_title
-	)
-
-	saved_title.text = (
-		"저장된 방"
-	)
-
-
-	saved_scroll = ScrollContainer.new()
-
-	panel.add_child(
-		saved_scroll
-	)
-
-
-	saved_rooms_container = VBoxContainer.new()
-
-	saved_scroll.add_child(
-		saved_rooms_container
-	)
-
-	saved_rooms_container.add_theme_constant_override(
-		"separation",
-		8
-	)
-
-
+	var footer := VBoxContainer.new()
+	footer.add_theme_constant_override("separation", 6 if show_saved else 18)
+	column.add_child(footer)
 	status_label = Label.new()
-
-	panel.add_child(
-		status_label
-	)
-
-	status_label.horizontal_alignment = (
-		HORIZONTAL_ALIGNMENT_CENTER
-	)
-
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	footer.add_child(status_label)
+	var back_button := Button.new()
+	back_button.text = "← 이전"
+	back_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_back_button = back_button
+	back_button.pressed.connect(_on_back_pressed)
+	footer.add_child(back_button)
+	_buttons.append(back_button)
 
 	delete_confirm_dialog = ConfirmationDialog.new()
-
-	add_child(
-		delete_confirm_dialog
+	delete_confirm_dialog.title = "서버 삭제"
+	delete_confirm_dialog.borderless = true
+	delete_confirm_dialog.confirmed.connect(_on_delete_room_confirmed)
+	add_child(delete_confirm_dialog)
+	delete_confirm_dialog.get_ok_button().hide()
+	delete_confirm_dialog.get_cancel_button().hide()
+	delete_confirm_dialog.get_label().hide()
+	var delete_margin := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		delete_margin.add_theme_constant_override("margin_" + side, 24)
+	delete_confirm_dialog.add_child(delete_margin)
+	var delete_content := VBoxContainer.new()
+	delete_content.add_theme_constant_override("separation", 18)
+	delete_margin.add_child(delete_content)
+	var delete_heading := Label.new()
+	delete_heading.text = "서버 삭제"
+	delete_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	delete_heading.add_theme_font_size_override("font_size", 26)
+	var heading_font := FontVariation.new()
+	heading_font.base_font = preload("res://fonts/Pretendard-Regular.otf")
+	heading_font.variation_embolden = 0.8
+	delete_heading.add_theme_font_override("font", heading_font)
+	delete_content.add_child(delete_heading)
+	_delete_message = Label.new()
+	_delete_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_delete_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_delete_message.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_delete_message.custom_minimum_size = Vector2(384, 76)
+	_delete_message.add_theme_font_size_override("font_size", 18)
+	_delete_message.add_theme_constant_override("line_spacing", 0)
+	delete_content.add_child(_delete_message)
+	var delete_actions := HBoxContainer.new()
+	delete_actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	delete_actions.add_theme_constant_override("separation", 12)
+	delete_content.add_child(delete_actions)
+	var confirm_delete := Button.new()
+	confirm_delete.text = "삭제"
+	confirm_delete.custom_minimum_size = Vector2(132, 48)
+	confirm_delete.add_theme_font_size_override("font_size", 20)
+	confirm_delete.pressed.connect(func() -> void:
+		delete_confirm_dialog.hide()
+		delete_confirm_dialog.confirmed.emit()
 	)
-
-	delete_confirm_dialog.title = (
-		"방 삭제"
-	)
-
-	delete_confirm_dialog.ok_button_text = (
-		"삭제"
-	)
-
-	delete_confirm_dialog.cancel_button_text = (
-		"취소"
-	)
-
-	delete_confirm_dialog.confirmed.connect(
-		_on_delete_room_confirmed
-	)
+	delete_actions.add_child(confirm_delete)
+	var cancel_delete := Button.new()
+	cancel_delete.text = "취소"
+	cancel_delete.custom_minimum_size = Vector2(132, 48)
+	cancel_delete.add_theme_font_size_override("font_size", 20)
+	cancel_delete.pressed.connect(delete_confirm_dialog.hide)
+	delete_actions.add_child(cancel_delete)
+	_rename_dialog = ConfirmationDialog.new()
+	_rename_dialog.title = "서버 이름 변경"
+	_rename_dialog.ok_button_text = "변경"
+	_rename_dialog.cancel_button_text = "취소"
+	_rename_dialog.dialog_hide_on_ok = false
+	_rename_dialog.confirmed.connect(_on_rename_confirmed)
+	add_child(_rename_dialog)
+	var rename_fields := VBoxContainer.new()
+	_rename_dialog.add_child(rename_fields)
+	var rename_label := Label.new()
+	rename_label.text = "새 서버 이름"
+	rename_fields.add_child(rename_label)
+	_rename_input = LineEdit.new()
+	_rename_input.expand_to_text_length = false
+	_rename_input.text_submitted.connect(_on_rename_submitted)
+	rename_fields.add_child(_rename_input)
+	_rename_error = Label.new()
+	_rename_error.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_rename_error.add_theme_color_override("font_color", Color("#eac88b"))
+	rename_fields.add_child(_rename_error)
 
 
 func _apply_layout() -> void:
-
-	var viewport_size := (
-		get_viewport_rect().size
-	)
-
-
-	# =====================================================
-	# 모바일
-	# =====================================================
-
-	if ScreenLayout.is_mobile_portrait():
-
-		panel.size = Vector2(
-			640,
-			800
-		)
-
-		panel.position = Vector2(
-			(
-				viewport_size.x
-				- panel.size.x
-			) / 2.0,
-			55
-		)
-
-
-		title_label.position = Vector2(
-			30,
-			24
-		)
-
-		title_label.size = Vector2(
-			580,
-			52
-		)
-
-		title_label.add_theme_font_size_override(
-			"font_size",
-			32
-		)
-
-
-		new_room_title.position = Vector2(
-			35,
-			105
-		)
-
-		new_room_title.size = Vector2(
-			300,
-			42
-		)
-
-		new_room_title.add_theme_font_size_override(
-			"font_size",
-			25
-		)
-
-
-		room_name_label.position = Vector2(
-			35,
-			165
-		)
-
-		room_name_label.size = Vector2(
-			120,
-			52
-		)
-
-		room_name_label.add_theme_font_size_override(
-			"font_size",
-			20
-		)
-
-
-		room_name_input.position = Vector2(
-			160,
-			165
-		)
-
-		room_name_input.size = Vector2(
-			440,
-			52
-		)
-
-		room_name_input.add_theme_font_size_override(
-			"font_size",
-			20
-		)
-
-
-		player_label.position = Vector2(
-			35,
-			235
-		)
-
-		player_label.size = Vector2(
-			120,
-			52
-		)
-
-		player_label.add_theme_font_size_override(
-			"font_size",
-			20
-		)
-
-
-		player_count_option.position = Vector2(
-			160,
-			235
-		)
-
-		player_count_option.size = Vector2(
-			150,
-			52
-		)
-
-		player_count_option.add_theme_font_size_override(
-			"font_size",
-			20
-		)
-
-
-		create_button.position = Vector2(
-			340,
-			235
-		)
-
-		create_button.size = Vector2(
-			260,
-			52
-		)
-
-		create_button.add_theme_font_size_override(
-			"font_size",
-			20
-		)
-
-
-		separator.position = Vector2(
-			35,
-			320
-		)
-
-		separator.size = Vector2(
-			565,
-			4
-		)
-
-
-		saved_title.position = Vector2(
-			35,
-			345
-		)
-
-		saved_title.size = Vector2(
-			300,
-			42
-		)
-
-		saved_title.add_theme_font_size_override(
-			"font_size",
-			25
-		)
-
-
-		saved_scroll.position = Vector2(
-			35,
-			400
-		)
-
-		saved_scroll.size = Vector2(
-			565,
-			290
-		)
-
-
-		saved_rooms_container.custom_minimum_size = Vector2(
-			540,
-			0
-		)
-
-
-		status_label.position = Vector2(
-			35,
-			715
-		)
-
-		status_label.size = Vector2(
-			565,
-			42
-		)
-
-		status_label.add_theme_font_size_override(
-			"font_size",
-			18
-		)
-
-
-	# =====================================================
-	# PC
-	# =====================================================
-
-	else:
-
-		panel.size = Vector2(
-			500,
-			510
-		)
-
-		panel.position = Vector2(
-			(
-				viewport_size.x
-				- panel.size.x
-			) / 2.0,
-			70
-		)
-
-
-		title_label.position = Vector2(
-			30,
-			20
-		)
-
-		title_label.size = Vector2(
-			440,
-			45
-		)
-
-		title_label.add_theme_font_size_override(
-			"font_size",
-			26
-		)
-
-
-		new_room_title.position = Vector2(
-			30,
-			82
-		)
-
-		new_room_title.size = Vector2(
-			200,
-			30
-		)
-
-		new_room_title.add_theme_font_size_override(
-			"font_size",
-			18
-		)
-
-
-		room_name_label.position = Vector2(
-			30,
-			125
-		)
-
-		room_name_label.size = Vector2(
-			90,
-			34
-		)
-
-		room_name_label.add_theme_font_size_override(
-			"font_size",
-			16
-		)
-
-
-		room_name_input.position = Vector2(
-			130,
-			125
-		)
-
-		room_name_input.size = Vector2(
-			340,
-			34
-		)
-
-		room_name_input.add_theme_font_size_override(
-			"font_size",
-			16
-		)
-
-
-		player_label.position = Vector2(
-			30,
-			170
-		)
-
-		player_label.size = Vector2(
-			90,
-			36
-		)
-
-		player_label.add_theme_font_size_override(
-			"font_size",
-			16
-		)
-
-
-		player_count_option.position = Vector2(
-			130,
-			170
-		)
-
-		player_count_option.size = Vector2(
-			120,
-			36
-		)
-
-		player_count_option.add_theme_font_size_override(
-			"font_size",
-			16
-		)
-
-
-		create_button.position = Vector2(
-			300,
-			170
-		)
-
-		create_button.size = Vector2(
-			170,
-			36
-		)
-
-		create_button.add_theme_font_size_override(
-			"font_size",
-			16
-		)
-
-
-		separator.position = Vector2(
-			30,
-			225
-		)
-
-		separator.size = Vector2(
-			440,
-			4
-		)
-
-
-		saved_title.position = Vector2(
-			30,
-			245
-		)
-
-		saved_title.size = Vector2(
-			200,
-			30
-		)
-
-		saved_title.add_theme_font_size_override(
-			"font_size",
-			18
-		)
-
-
-		saved_scroll.position = Vector2(
-			30,
-			285
-		)
-
-		saved_scroll.size = Vector2(
-			440,
-			150
-		)
-
-
-		saved_rooms_container.custom_minimum_size = Vector2(
-			420,
-			0
-		)
-
-
-		status_label.position = Vector2(
-			30,
-			450
-		)
-
-		status_label.size = Vector2(
-			440,
-			30
-		)
-
-		status_label.add_theme_font_size_override(
-			"font_size",
-			16
-		)
-
-
+	if not is_instance_valid(_margin):
+		return
+	var mobile: bool = ScreenLayout.is_mobile_portrait()
+	var target_width := 640.0 if mobile else 700.0
+	var side := int(maxf(24.0, (size.x - target_width) / 2.0))
+	_margin.add_theme_constant_override("margin_left", side)
+	_margin.add_theme_constant_override("margin_right", side)
+	_margin.add_theme_constant_override("margin_top", 55 if mobile else 60)
+	_margin.add_theme_constant_override("margin_bottom", 24)
+	theme.default_font_size = 26 if mobile else 18
+	_heading.add_theme_font_size_override("font_size", 34 if mobile else 28)
+	for button in _buttons:
+		button.custom_minimum_size.y = 64 if mobile else 46
+	_back_button.custom_minimum_size.x = 150 if mobile else 110
+	if is_instance_valid(room_name_input):
+		room_name_input.custom_minimum_size.y = 64 if mobile else 46
+	if is_instance_valid(saved_scroll):
+		saved_scroll.custom_minimum_size.y = 640 if mobile else 330
 	_refresh_saved_rooms()
 
+
+func _on_back_pressed() -> void:
+	get_tree().change_scene_to_file("res://start.tscn")
+
+
+func _format_saved_time(value: String) -> String:
+	# Existing saves contain local system time; only change its presentation.
+	var parts := value.replace(" ", "T").split("T")
+	if parts.size() != 2:
+		return "저장 시간 없음"
+	var date := parts[0].split("-")
+	var clock := parts[1].split(":")
+	if date.size() != 3 or clock.size() < 2:
+		return "저장 시간 없음"
+	for number in [date[0], date[1], date[2], clock[0], clock[1]]:
+		if not number.is_valid_int():
+			return "저장 시간 없음"
+	var hour := int(clock[0])
+	var period := "오전" if hour < 12 else "오후"
+	var display_hour := hour % 12
+	if display_hour == 0:
+		display_hour = 12
+	return "%d년 %d월 %d일 %s %d시 %d분" % [
+		int(date[0]), int(date[1]), int(date[2]),
+		period, display_hour, int(clock[1])
+	]
 
 func _on_create_room_pressed() -> void:
 
@@ -660,9 +245,7 @@ func _on_create_room_pressed() -> void:
 		room_name = "새 플레이"
 
 
-	var max_players := (
-		player_count_option.get_selected_id()
-	)
+	var max_players := 4
 
 
 	RoomManager.create_room(
@@ -684,6 +267,7 @@ func _refresh_saved_rooms() -> void:
 
 	for child in saved_rooms_container.get_children():
 
+		saved_rooms_container.remove_child(child)
 		child.queue_free()
 
 
@@ -697,7 +281,7 @@ func _refresh_saved_rooms() -> void:
 		var empty_label := Label.new()
 
 		empty_label.text = (
-			"저장된 방이 없습니다."
+			"저장된 서버가 없습니다."
 		)
 
 		saved_rooms_container.add_child(
@@ -724,14 +308,7 @@ func _refresh_saved_rooms() -> void:
 		var room_name := str(
 			room.get(
 				"room_name",
-				"이름 없는 방"
-			)
-		)
-
-		var max_players := int(
-			room.get(
-				"max_players",
-				1
+				"이름 없는 서버"
 			)
 		)
 
@@ -752,13 +329,8 @@ func _refresh_saved_rooms() -> void:
 
 		var room_button := Button.new()
 
-		room_button.text = (
-			room_name
-			+ " · "
-			+ str(max_players)
-			+ "인 · "
-			+ updated_at
-		)
+		room_button.text = room_name + " · " + _format_saved_time(updated_at)
+		room_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 		room_button.size_flags_horizontal = (
 			Control.SIZE_EXPAND_FILL
@@ -795,6 +367,12 @@ func _refresh_saved_rooms() -> void:
 		)
 
 
+		var rename_button := Button.new()
+		rename_button.text = "이름 변경"
+		rename_button.custom_minimum_size = Vector2(120, 54) if ScreenLayout.is_mobile_portrait() else Vector2(90, 42)
+		rename_button.add_theme_font_size_override("font_size", 20 if ScreenLayout.is_mobile_portrait() else 16)
+		rename_button.pressed.connect(_on_rename_pressed.bind(room_id, room_name))
+		row.add_child(rename_button)
 		var delete_button := Button.new()
 
 		delete_button.text = "삭제"
@@ -826,6 +404,33 @@ func _refresh_saved_rooms() -> void:
 		row.add_child(
 			delete_button
 		)
+
+
+func _on_rename_pressed(room_id: String, room_name: String) -> void:
+	_pending_rename_id = room_id
+	_rename_input.text = room_name
+	_rename_error.text = ""
+	_rename_dialog.popup_centered(Vector2i(560, 220) if ScreenLayout.is_mobile_portrait() else Vector2i(430, 180))
+	_rename_input.grab_focus()
+	_rename_input.select_all()
+
+
+func _on_rename_submitted(_text: String) -> void:
+	_on_rename_confirmed()
+
+
+func _on_rename_confirmed() -> void:
+	var new_name := _rename_input.text.strip_edges()
+	if new_name.is_empty():
+		_rename_error.text = "서버 이름을 입력해 주세요."
+		return
+	if not RoomManager.rename_room(_pending_rename_id, new_name):
+		_rename_error.text = "이름을 변경하지 못했습니다. 다시 시도해 주세요."
+		return
+	_pending_rename_id = ""
+	_rename_dialog.hide()
+	status_label.text = "서버 이름을 변경했습니다."
+	_refresh_saved_rooms()
 
 
 func _on_saved_room_pressed(
@@ -917,18 +522,18 @@ func _on_delete_room_pressed(
 	)
 
 
-	delete_confirm_dialog.dialog_text = (
+	_delete_message.text = (
 		"'"
 		+ room_name
-		+ "' 방을 삭제하시겠습니까?\n\n"
+		+ "' 서버를 삭제하시겠습니까?\n"
 		+ "삭제한 플레이 기록은 복구할 수 없습니다."
 	)
 
 
 	delete_confirm_dialog.popup_centered(
 		Vector2i(
-			430,
-			190
+			540 if ScreenLayout.is_mobile_portrait() else 480,
+			270
 		)
 	)
 
@@ -949,13 +554,13 @@ func _on_delete_room_confirmed() -> void:
 	if success:
 
 		status_label.text = (
-			"방을 삭제했습니다."
+			"서버를 삭제했습니다."
 		)
 
 	else:
 
 		status_label.text = (
-			"방을 삭제하지 못했습니다."
+			"서버를 삭제하지 못했습니다."
 		)
 
 

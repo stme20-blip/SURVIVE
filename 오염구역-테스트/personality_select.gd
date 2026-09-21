@@ -644,7 +644,7 @@ func _on_confirm_pressed() -> void:
 	# TIMID
 	# =====================================================
 
-	GameData.selected_personality = str(
+	var new_personality := str(
 		data.get(
 			"key",
 			""
@@ -658,12 +658,16 @@ func _on_confirm_pressed() -> void:
 
 	if RoomManager.has_room():
 
-		RoomManager.set_selected_character(
+		var saved: bool = RoomManager.set_selected_character(
 			GameData.selected_character_id,
 			GameData.selected_name,
 			GameData.selected_portrait_path,
-			GameData.selected_personality
+			new_personality
 		)
+		if not saved:
+			description_label.text = "특성 변경은 한 플레이에 3회까지 가능합니다. 한도가 남아 있다면 저장 상태를 확인해 주세요."
+			return
+	GameData.selected_personality = new_personality
 
 
 	# =====================================================

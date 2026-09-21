@@ -19,6 +19,7 @@ extends Control
 
 var player_portrait: Texture2D
 var player_name: String = "주인공"
+var _settings_refresh_pending: bool = false
 
 var is_restoring_dialogue: bool = false
 
@@ -336,6 +337,7 @@ const MOBILE_SECTION_BG := Color(
 # =========================================================
 
 func _ready() -> void:
+	GameData.character_settings_changed.connect(_on_character_settings_changed)
 
 	_load_selected_character()
 	_load_episode_dialogue_data()
@@ -493,6 +495,18 @@ func _apply_current_layout() -> void:
 # 플레이어
 # =========================================================
 
+func _on_character_settings_changed(_personality_changed: bool) -> void:
+	_settings_refresh_pending = true
+
+
+func _refresh_character_settings() -> void:
+	_settings_refresh_pending = false
+	_load_selected_character()
+	portrait_texture.texture = player_portrait
+	mobile_portrait_texture.texture = player_portrait
+	name_label.text = player_name
+
+
 func _load_selected_character() -> void:
 
 	if not GameData.selected_name.strip_edges().is_empty():
@@ -593,6 +607,12 @@ func _create_desktop_portrait() -> void:
 	portrait_texture.texture_filter = (
 		CanvasItem.TEXTURE_FILTER_NEAREST
 	)
+	var portrait_background := ColorRect.new()
+	portrait_background.color = Color("#202224")
+	portrait_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_background.show_behind_parent = true
+	portrait_texture.add_child(portrait_background)
+	portrait_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 
 	name_plate = Panel.new()
@@ -1359,6 +1379,12 @@ func _create_mobile_dialogue() -> void:
 	mobile_portrait_texture.texture_filter = (
 		CanvasItem.TEXTURE_FILTER_NEAREST
 	)
+	var portrait_background := ColorRect.new()
+	portrait_background.color = Color("#202224")
+	portrait_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_background.show_behind_parent = true
+	mobile_portrait_texture.add_child(portrait_background)
+	portrait_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 
 	# =====================================================
@@ -1480,7 +1506,7 @@ func _create_mobile_discussion() -> void:
 
 
 	mobile_discussion_title.text = (
-		"토론 기록"
+		"생존 기록"
 	)
 
 
@@ -1502,7 +1528,7 @@ func _create_mobile_discussion() -> void:
 
 
 	mobile_discussion_subtitle.text = (
-		"이 방에서 작성한 모든 댓글이 기록됩니다."
+		"서버에서 작성한 모든 댓글이 기록됩니다."
 	)
 
 
@@ -1591,7 +1617,7 @@ func _create_mobile_discussion() -> void:
 
 
 	mobile_message_input.placeholder_text = (
-		"댓글 입력..."
+		"대사 또는 기록 입력"
 	)
 
 
@@ -1900,6 +1926,8 @@ func _on_dialogue_processed(
 	_dialogue,
 	options
 ) -> void:
+	if _settings_refresh_pending:
+		_refresh_character_settings()
 
 	# =====================================================
 	# 기록
@@ -3205,6 +3233,18 @@ func _add_mobile_comment(
 		edit_input.custom_minimum_size = Vector2(0, 48)
 		edit_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		edit_input.add_theme_font_size_override("font_size", 19)
+		edit_input.expand_to_text_length = false
+		var edit_style := StyleBoxFlat.new()
+		edit_style.bg_color = Color("#121212")
+		edit_style.border_color = Color(1, 1, 1, 0.35)
+		edit_style.set_border_width_all(1)
+		edit_style.content_margin_left = 8
+		edit_style.content_margin_right = 8
+		edit_input.add_theme_stylebox_override("normal", edit_style)
+		var focus_style := edit_style.duplicate() as StyleBoxFlat
+		focus_style.draw_center = false
+		focus_style.border_color = Color(1, 1, 1, 0.7)
+		edit_input.add_theme_stylebox_override("focus", focus_style)
 
 		var button_row := HBoxContainer.new()
 		box.add_child(button_row)
@@ -3257,7 +3297,7 @@ func _focus_mobile_edit_input(
 		return
 
 	edit_input.grab_focus()
-	edit_input.caret_column = edit_input.text.length()
+	edit_input.caret_column = 0
 
 
 func _on_mobile_edit_save_pressed(

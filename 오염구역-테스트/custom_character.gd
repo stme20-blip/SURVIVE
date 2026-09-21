@@ -1,5 +1,8 @@
 extends Control
 
+signal portrait_image_selected(image: Image)
+var portrait_picker_only: bool = false
+
 
 # =========================================================
 # 커스텀 초상화 저장 설정
@@ -39,6 +42,7 @@ var portrait_panel: Panel
 var portrait_texture: TextureRect
 
 var image_button: Button
+var portrait_choice_dialog: AcceptDialog
 
 var name_title: Label
 var name_input: LineEdit
@@ -78,10 +82,21 @@ var web_reader_callback = null
 # =========================================================
 
 func _ready() -> void:
+	if portrait_picker_only:
+		status_label = Label.new()
+		status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		add_child(status_label)
+		status_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_create_file_dialog()
+		_create_portrait_choice_dialog()
+		if OS.has_feature("web"):
+			_setup_web_file_picker()
+		return
 
 	_create_ui()
 
 	_create_file_dialog()
+	_create_portrait_choice_dialog()
 
 
 	if OS.has_feature(
@@ -320,6 +335,7 @@ func _create_ui() -> void:
 	# =====================================================
 
 	image_button = Button.new()
+	image_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 	main_box.add_child(
 		image_button
@@ -348,6 +364,7 @@ func _create_ui() -> void:
 
 
 	name_title.text = "이름"
+	name_title.hide()
 
 
 	name_input = LineEdit.new()
@@ -381,9 +398,7 @@ func _create_ui() -> void:
 	)
 
 
-	status_label.text = (
-		"이름과 초상화를 모두 설정하세요."
-	)
+	status_label.text = ""
 
 
 	status_label.horizontal_alignment = (
@@ -507,6 +522,39 @@ func _create_file_dialog() -> void:
 # =========================================================
 
 func _on_image_button_pressed() -> void:
+	portrait_choice_dialog.popup_centered(
+		Vector2i(440, 210) if ScreenLayout.is_mobile_portrait() else Vector2i(340, 170)
+	)
+
+
+func _create_portrait_choice_dialog() -> void:
+	portrait_choice_dialog = AcceptDialog.new()
+	portrait_choice_dialog.title = "초상화 선택"
+	portrait_choice_dialog.ok_button_text = "취소"
+	add_child(portrait_choice_dialog)
+	var choices := VBoxContainer.new()
+	choices.add_theme_constant_override("separation", 12)
+	portrait_choice_dialog.add_child(choices)
+	var upload_button := Button.new()
+	upload_button.text = "파일 업로드"
+	upload_button.custom_minimum_size.y = 56
+	upload_button.pressed.connect(_on_upload_portrait_pressed)
+	choices.add_child(upload_button)
+	var without_portrait_button := Button.new()
+	without_portrait_button.text = "초상화 미설정"
+	without_portrait_button.custom_minimum_size.y = 56
+	without_portrait_button.pressed.connect(_on_without_portrait_pressed)
+	choices.add_child(without_portrait_button)
+
+
+func _on_without_portrait_pressed() -> void:
+	portrait_choice_dialog.hide()
+	var image := preload("res://default_portrait.svg").get_image()
+	_accept_portrait_image(image)
+
+
+func _on_upload_portrait_pressed() -> void:
+	portrait_choice_dialog.hide()
 
 	# =====================================================
 	# Web
@@ -865,6 +913,9 @@ func _accept_portrait_image(
 
 	if image.is_empty():
 		return
+	if portrait_picker_only:
+		portrait_image_selected.emit(image)
+		return
 
 
 	# =====================================================
@@ -1160,7 +1211,7 @@ func _apply_responsive_layout() -> void:
 
 
 		image_button.custom_minimum_size = Vector2(
-			0,
+			240,
 			56
 		)
 
@@ -1259,7 +1310,7 @@ func _apply_responsive_layout() -> void:
 
 
 		image_button.custom_minimum_size = Vector2(
-			0,
+			200,
 			48
 		)
 
