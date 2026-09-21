@@ -228,7 +228,9 @@ var mobile_editing_comment_id: String = ""
 # Keep a browser input bridge for the mobile survival-record fields instead.
 var _mobile_web_input_bridge: JavaScriptObject
 var _mobile_web_input_callback: JavaScriptObject
+var _mobile_web_viewport_callback: JavaScriptObject
 var _mobile_web_active_input: LineEdit
+var _mobile_keyboard_height_px := 0.0
 
 
 # =========================================================
@@ -1821,9 +1823,13 @@ func _setup_mobile_web_input_bridge() -> void:
 	_mobile_web_input_callback = JavaScriptBridge.create_callback(
 		_on_mobile_web_input_changed
 	)
+	_mobile_web_viewport_callback = JavaScriptBridge.create_callback(
+		_on_mobile_web_viewport_changed
+	)
 
 	var browser_window := JavaScriptBridge.get_interface("window")
 	browser_window.__surviveMobileTextChanged = _mobile_web_input_callback
+	browser_window.__surviveMobileViewportChanged = _mobile_web_viewport_callback
 
 	JavaScriptBridge.eval("""
 		if (!window.surviveMobileText) {
@@ -1867,6 +1873,13 @@ func _setup_mobile_web_input_bridge() -> void:
 				},
 				close() { field.blur(); field.style.pointerEvents = 'none'; }
 			};
+			if (window.visualViewport && !window.__surviveMobileViewportListener) {
+				window.__surviveMobileViewportListener = () => {
+					const keyboard = Math.max(0, window.innerHeight - window.visualViewport.height);
+					if (window.__surviveMobileViewportChanged) window.__surviveMobileViewportChanged(keyboard);
+				};
+				window.visualViewport.addEventListener('resize', window.__surviveMobileViewportListener);
+			}
 		}
 	""", true)
 
@@ -1932,6 +1945,17 @@ func _on_mobile_web_input_changed(args: Array) -> void:
 
 	_mobile_web_active_input.text = str(args[0])
 	_mobile_web_active_input.caret_column = _mobile_web_active_input.text.length()
+
+
+func _on_mobile_web_viewport_changed(args: Array) -> void:
+
+	if args.is_empty():
+		return
+
+	_mobile_keyboard_height_px = maxf(0.0, float(args[0]))
+
+	if ScreenLayout.is_mobile_portrait():
+		call_deferred("_apply_current_layout")
 
 
 func _close_mobile_web_input() -> void:
@@ -2611,6 +2635,8 @@ func _apply_mobile_layout() -> void:
 		current_y,
 		viewport_size
 	)
+
+	_raise_mobile_discussion_above_keyboard(viewport_size)
 
 
 # =========================================================
@@ -3299,6 +3325,27 @@ func _layout_mobile_discussion(
 	_place_mobile_web_input()
 
 	_refresh_mobile_feed()
+
+
+func _raise_mobile_discussion_above_keyboard(viewport_size: Vector2) -> void:
+
+	if not ScreenLayout.is_mobile_portrait() or _mobile_keyboard_height_px <= 0.0:
+		return
+
+	var physical_height := float(DisplayServer.window_get_size().y)
+	if physical_height <= 0.0:
+		return
+
+	var keyboard_height := _mobile_keyboard_height_px * viewport_size.y / physical_height
+	var visible_bottom := viewport_size.y - keyboard_height - 12.0
+	var input_bottom := mobile_message_input.get_global_rect().end.y
+	var upward_shift := maxf(0.0, input_bottom - visible_bottom)
+
+	if upward_shift <= 0.0:
+		return
+
+	mobile_discussion_panel.position.y -= upward_shift
+	_place_mobile_web_input()
 
 
 # =========================================================
