@@ -1763,6 +1763,10 @@ func _create_mobile_discussion() -> void:
 		"대사 또는 기록 입력"
 	)
 	mobile_message_input.virtual_keyboard_enabled = false
+	# The browser-owned field below is the only keyboard entry point on Web.
+	# Do not let Godot focus this proxy LineEdit: Naver's in-app WebView
+	# otherwise opens Godot's virtual keyboard and resizes the canvas.
+	mobile_message_input.focus_mode = Control.FOCUS_NONE
 	mobile_message_input.gui_input.connect(
 		_on_mobile_comment_input_gui_input.bind(mobile_message_input)
 	)
@@ -1840,12 +1844,11 @@ func _setup_mobile_web_input_bridge() -> void:
 			field.autocorrect = 'on';
 			field.autocapitalize = 'sentences';
 			field.spellcheck = false;
-			field.setAttribute('aria-hidden', 'true');
 			Object.assign(field.style, {
 				position: 'fixed', left: '0', top: '0', width: '1px', height: '1px',
-				opacity: '0.001', color: 'transparent', caretColor: 'transparent',
+				opacity: '0.01', color: 'transparent', caretColor: 'transparent',
 				background: 'transparent', border: '0', padding: '0', margin: '0',
-				zIndex: '2147483647', pointerEvents: 'none'
+				fontSize: '16px', zIndex: '2147483647', pointerEvents: 'none'
 			});
 			document.body.appendChild(field);
 			const sendValue = () => {
@@ -1871,6 +1874,7 @@ func _setup_mobile_web_input_bridge() -> void:
 					field.focus({ preventScroll: true });
 					field.setSelectionRange(field.value.length, field.value.length);
 				},
+				read() { return field.value; },
 				close() { field.blur(); field.style.pointerEvents = 'none'; }
 			};
 			if (window.visualViewport && !window.__surviveMobileViewportListener) {
@@ -1911,7 +1915,7 @@ func _open_mobile_web_input(input: LineEdit) -> void:
 		return
 
 	_mobile_web_active_input = input
-	input.grab_focus()
+	_place_mobile_web_input()
 	_mobile_web_input_bridge.open(input.text)
 
 
@@ -1920,7 +1924,7 @@ func _place_mobile_web_input() -> void:
 	if not OS.has_feature("web") or _mobile_web_input_bridge == null:
 		return
 
-	if not is_instance_valid(mobile_message_input) or not mobile_message_input.is_visible_in_tree():
+	if not is_instance_valid(_mobile_web_active_input) or not _mobile_web_active_input.is_visible_in_tree():
 		_close_mobile_web_input()
 		return
 
@@ -1928,9 +1932,9 @@ func _place_mobile_web_input() -> void:
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		return
 
-	var rect := mobile_message_input.get_global_rect()
+	var rect := _mobile_web_active_input.get_global_rect()
 	_mobile_web_input_bridge.place(
-		mobile_message_input.text,
+		_mobile_web_active_input.text,
 		rect.position.x / viewport_size.x,
 		rect.position.y / viewport_size.y,
 		rect.size.x / viewport_size.x,
@@ -1945,6 +1949,23 @@ func _on_mobile_web_input_changed(args: Array) -> void:
 
 	_mobile_web_active_input.text = str(args[0])
 	_mobile_web_active_input.caret_column = _mobile_web_active_input.text.length()
+
+
+func _process(_delta: float) -> void:
+
+	# Some Android WebViews emit no JavaScriptBridge callback while composing
+	# Korean text. Poll the DOM field as a fallback so letters, spaces, digits,
+	# and punctuation all reach the Godot input.
+	if not OS.has_feature("web") or _mobile_web_input_bridge == null:
+		return
+
+	if not is_instance_valid(_mobile_web_active_input):
+		return
+
+	var web_text: Variant = _mobile_web_input_bridge.read()
+	if web_text is String and _mobile_web_active_input.text != web_text:
+		_mobile_web_active_input.text = web_text
+		_mobile_web_active_input.caret_column = _mobile_web_active_input.text.length()
 
 
 func _on_mobile_web_viewport_changed(args: Array) -> void:
@@ -3407,7 +3428,8 @@ func _submit_mobile_comment_after_ime() -> void:
 	)
 
 
-	mobile_message_input.grab_focus()
+	# Do not focus Godot's proxy LineEdit on Web; the browser overlay retains
+	# focus and avoids triggering the in-app browser's canvas keyboard path.
 
 
 # =========================================================
@@ -3613,6 +3635,7 @@ func _add_mobile_comment(
 		var edit_input := LineEdit.new()
 		box.add_child(edit_input)
 		edit_input.virtual_keyboard_enabled = false
+		edit_input.focus_mode = Control.FOCUS_NONE
 		edit_input.gui_input.connect(
 			_on_mobile_comment_input_gui_input.bind(edit_input)
 		)
@@ -3683,8 +3706,9 @@ func _focus_mobile_edit_input(
 	if not is_instance_valid(edit_input):
 		return
 
-	edit_input.grab_focus()
-	edit_input.caret_column = 0
+	if not OS.has_feature("web"):
+		edit_input.grab_focus()
+		edit_input.caret_column = 0
 
 
 func _on_mobile_edit_save_pressed(
