@@ -92,9 +92,7 @@ func _apply_layout() -> void:
 		return
 
 
-	var new_mobile_state := (
-		physical_size.y > physical_size.x
-	)
+	var new_mobile_state := _is_portrait_display(physical_size)
 
 
 	var target_size: Vector2i
@@ -184,3 +182,20 @@ func _apply_layout() -> void:
 
 
 	layout_changed.emit()
+
+
+func _is_portrait_display(physical_size: Vector2i) -> bool:
+
+	# A mobile browser can reduce the Godot viewport while its keyboard is
+	# visible. That is not a device rotation, so use the physical screen size
+	# on Web exports and only fall back to the window dimensions elsewhere.
+	if OS.has_feature("web"):
+		var browser_portrait: Variant = JavaScriptBridge.eval(
+			"window.screen.height >= window.screen.width;",
+			true
+		)
+
+		if browser_portrait is bool:
+			return browser_portrait
+
+	return physical_size.y > physical_size.x
