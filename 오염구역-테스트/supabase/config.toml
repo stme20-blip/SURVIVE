@@ -1,0 +1,5 @@
+project_id = "survival-story"
+
+[functions.create-room]
+# The handler validates every Bearer token with Auth /user before any DB access.
+verify_jwt = false

@@ -77,7 +77,8 @@ func _ensure_directory(
 
 func create_room(
 	room_name: String,
-	max_players: int
+	max_players: int,
+	online_room: Dictionary = {}
 ) -> Dictionary:
 
 	max_players = clamp(
@@ -164,6 +165,9 @@ func create_room(
 	}
 
 
+	# Optional metadata only: local IDs, members, save schema and story remain intact.
+	if not online_room.is_empty():
+		current_room["online_room"] = online_room.duplicate(true)
 	save_current_room()
 
 

@@ -1216,3 +1216,20 @@ RoomManager의 정상 저장/undo/transcript 기능은 불필요하게 변경하
 - 테스트 사용자 ID: de46cc20-d16a-4b6c-a2fb-fe50b1b270e5. 테스트 세션은 게임 본래 저장과 분리된 CodexSupabaseValidation에 보관한다.
 - 모의 응답 검증: 네트워크 실패·저장 실패·손상된 캐시·ID 불일치·만료 토큰 갱신·오프라인 상태 및 캐시 보존 통과.
 - 실제 웹 배포에서 브라우저 IndexedDB 세션 유지 및 모바일 인증은 추가 확인 필요. 테스트 프로젝트의 Anonymous Sign-Ins 활성화 후 실제 연결 성공.
+
+## 40. create-room 연결 (2026-09-21)
+
+- 구현 파일은 작성 및 모의 검증 완료. Supabase CLI 설치/프로젝트 link가 확인되지 않아 실제 함수 배포와 실 DB 생성 검증은 아직 하지 않았다. 배포 및 테스트 명령은 `supabase/README.md` 참고.
+- 기존 AuthManager와 Autoload 설정은 그대로 사용. `RoomService.gd`는 room_menu가 소유하는 Node이며 `await AuthManager.get_access_token()`으로 토큰을 받아 `/functions/v1/create-room`에 POST한다. 토큰/HTTP 본문은 로그에 남기지 않는다.
+- 함수: `supabase/functions/create-room/index.ts`. CORS OPTIONS 지원. `supabase/config.toml`의 verify_jwt=false는 함수 내부 Auth `/auth/v1/user` 검증으로 대체하는 설정이다. 인증되지 않은 요청은 DB 접근 전에 401. 서비스 역할 키는 Edge 환경 변수에서만 읽는다.
+- 현재 DB: rooms(id, host_user_id, invite_code UNIQUE, max_players, status, created_at), room_members(room_id, user_id, role, display_name, joined_at). 기존 SELECT RLS와 host 자동등록 trigger를 사용한다. 클라이언트 직접 쓰기 권한은 추가하지 않는다.
+- host_user_id는 검증한 auth user UUID, max_players=4, status=lobby로 고정. 클라이언트 body는 사용하지 않는다. 6자리 영문 대문자/숫자 초대 코드는 서버의 암호학적 난수로 생성하며 I/O/0/1 제외. invite_code UNIQUE 충돌에만 최대 5회 insert 시도. host member는 trigger가 생성하므로 함수에서는 추가 insert하지 않는다.
+- 성공 응답: room_id, invite_code, max_players, status. 실패 응답은 error 코드. 인증/네트워크/HTTP/함수/DB/비정상 응답을 Godot 안내와 안전한 Output 코드로 구분한다.
+- RoomManager.create_room에 선택 인자 online_room만 추가했다. 기존 로컬 room_id, LOCAL_1, SCHEMA_VERSION=4, 저장/진행 구조를 유지하고 `current_room.online_room`에 온라인 room_id, invite_code, max_players, status, host_user_id, is_host를 저장한다. 온라인 메타데이터는 클라이언트 표시용이며 향후 서버 권한 판정에 신뢰하면 안 된다.
+- DB에 room_name 컬럼이 없으므로 서버 이름과 이름 변경은 기존 로컬 저장에만 적용한다. 기존 삭제도 로컬 삭제만 수행한다. 온라인 삭제/이름 변경/클라우드 저장은 구현하지 않았다.
+- 생성 UI: 새로운 서버 만들기 → 요청 중 생성/이전/이름 입력 비활성화 → 성공 후 초대 코드 표시 → 계속 → 기존 prologue.tscn. 실패하면 기존 current_room을 교체하지 않으며 입력을 복구한다. 초대 코드는 저장된 서버 목록에도 표시한다.
+- 로컬 저장 실패 시 계속 버튼으로 저장만 재시도하며 서버를 다시 만들지 않는다. 기존 로컬 저장 불러오기는 유지한다. 온라인 인증 없는 새 온라인 서버 생성은 세션 없음 안내로 차단한다.
+- 자동 POST 재시도/영속 idempotency는 이번 범위에 없다. 타임아웃 또는 응답 유실 시 생성 결과가 불확실하므로 재요청 전 Dashboard rooms를 확인한다.
+- 함수 모의 테스트(Node): 무인증/CORS, 인증된 host 고정, 정원/상태 고정, 초대 코드 충돌 재시도 및 소진, 다른 UNIQUE 오류, DB/설정/네트워크 오류 통과.
+- Godot 4.7.1 격리 복사본: 세션 없음/HTTP/비정상 응답 처리, 기존 로컬 저장 호환, 온라인 메타데이터 저장 복원, UI 실패 복구, 중복 클릭 방지, 코드 표시, 프롤로그 이동 통과. 실제 웹 호출 및 DB trigger/RLS 동작은 배포 후 확인해야 한다.
+- 초대 코드 참가, Realtime/Presence, 선택 동의는 미구현. AuthManager, main.gd, PC/모바일 게임 레이아웃, Dialogue Nodes, 스토리 .tres는 수정하지 않았다.
