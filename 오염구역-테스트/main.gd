@@ -1253,7 +1253,7 @@ func _create_mobile_scroll() -> void:
 	var arrow_style := StyleBoxFlat.new()
 	arrow_style.bg_color = Color(0.09, 0.10, 0.12, 0.65)
 	arrow_style.set_border_width_all(0)
-	arrow_style.set_corner_radius_all(0)
+	arrow_style.set_corner_radius_all(28)
 	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
 		mobile_scroll_arrow.add_theme_stylebox_override(state, arrow_style)
 	mobile_scroll_arrow.pressed.connect(_on_mobile_scroll_arrow_pressed)
@@ -1963,7 +1963,7 @@ func _setup_mobile_web_input_bridge() -> void:
 			title.textContent = '생존 기록';
 			cancel.textContent = '닫기';
 			submit.textContent = '등록';
-			field.placeholder = '대사 또는 기록 입력 · 수정버전11';
+			field.placeholder = '대사 또는 기록 입력 · 수정버전12';
 			Object.assign(title.style, { display: 'block', fontSize: '20px', lineHeight: '1.3' });
 			Object.assign(composer.style, {
 				position: 'fixed', display: 'none', zIndex: '2147483647',
