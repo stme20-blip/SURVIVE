@@ -220,6 +220,7 @@ var mobile_feed_container: VBoxContainer
 var mobile_message_input: LineEdit
 var mobile_submit_button: Button
 var mobile_download_button: Button
+var mobile_composer_back_button: Button
 
 var mobile_editing_comment_id: String = ""
 
@@ -231,6 +232,7 @@ var _mobile_web_input_callback: JavaScriptObject
 var _mobile_web_viewport_callback: JavaScriptObject
 var _mobile_web_active_input: LineEdit
 var _mobile_keyboard_height_px := 0.0
+var _mobile_keyboard_canvas_ratio := 0.0
 var _mobile_comment_composer_mode := false
 
 
@@ -1713,6 +1715,15 @@ func _create_mobile_discussion() -> void:
 		_on_download_transcript_pressed
 	)
 
+	# Shown only while the mobile keyboard is open. This lets the player leave
+	# the composer without submitting a comment.
+	mobile_composer_back_button = Button.new()
+	mobile_discussion_panel.add_child(mobile_composer_back_button)
+	mobile_composer_back_button.text = "뒤로가기"
+	mobile_composer_back_button.add_theme_font_size_override("font_size", 16)
+	mobile_composer_back_button.pressed.connect(_on_mobile_composer_back_pressed)
+	mobile_composer_back_button.visible = false
+
 
 	# -----------------------------------------------------
 	# 선
@@ -1881,7 +1892,9 @@ func _setup_mobile_web_input_bridge() -> void:
 			if (window.visualViewport && !window.__surviveMobileViewportListener) {
 				window.__surviveMobileViewportListener = () => {
 					const keyboard = Math.max(0, window.innerHeight - window.visualViewport.height);
-					if (window.__surviveMobileViewportChanged) window.__surviveMobileViewportChanged(keyboard);
+					const canvas = document.getElementById('canvas');
+					const canvasHeight = canvas ? canvas.getBoundingClientRect().height : 0;
+					if (window.__surviveMobileViewportChanged) window.__surviveMobileViewportChanged(keyboard, canvasHeight);
 				};
 				window.visualViewport.addEventListener('resize', window.__surviveMobileViewportListener);
 			}
@@ -1980,6 +1993,12 @@ func _on_mobile_web_viewport_changed(args: Array) -> void:
 		return
 
 	_mobile_keyboard_height_px = maxf(0.0, float(args[0]))
+	if args.size() >= 2 and float(args[1]) > 0.0:
+		_mobile_keyboard_canvas_ratio = clampf(
+			_mobile_keyboard_height_px / float(args[1]),
+			0.0,
+			0.9
+		)
 
 	if ScreenLayout.is_mobile_portrait():
 		call_deferred("_apply_current_layout")
@@ -1997,8 +2016,14 @@ func _finish_mobile_comment_composer() -> void:
 
 	_mobile_comment_composer_mode = false
 	_mobile_keyboard_height_px = 0.0
+	_mobile_keyboard_canvas_ratio = 0.0
 	_close_mobile_web_input()
 	_apply_current_layout()
+
+
+func _on_mobile_composer_back_pressed() -> void:
+
+	_finish_mobile_comment_composer()
 
 
 func _sync_mobile_web_input_now() -> void:
@@ -2572,8 +2597,17 @@ func _apply_mobile_layout() -> void:
 		mobile_insight_panel.visible = false
 		mobile_dialogue_panel.visible = false
 		mobile_portrait_panel.visible = false
-		_layout_mobile_discussion(0.0, viewport_size)
-		_raise_mobile_discussion_above_keyboard(viewport_size)
+		var composer_height := maxf(
+			240.0,
+			viewport_size.y * (1.0 - _mobile_keyboard_canvas_ratio)
+		)
+		# The visible area above the keyboard is wider than it is tall. Lay out
+		# the record panel inside that area instead of scaling the full portrait
+		# game canvas down into it.
+		_layout_mobile_discussion(
+			0.0,
+			Vector2(viewport_size.x, composer_height)
+		)
 		return
 
 
@@ -3305,6 +3339,11 @@ func _layout_mobile_discussion(
 		140,
 		40
 	)
+
+	mobile_download_button.visible = not _mobile_comment_composer_mode
+	mobile_composer_back_button.visible = _mobile_comment_composer_mode
+	mobile_composer_back_button.position = Vector2(w - 132, 14)
+	mobile_composer_back_button.size = Vector2(116, 40)
 
 
 	# -----------------------------------------------------
