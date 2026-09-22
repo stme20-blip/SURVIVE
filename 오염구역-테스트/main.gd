@@ -189,6 +189,8 @@ var episode_back_button: Button
 
 var mobile_scroll: ScrollContainer
 var mobile_content: Control
+var mobile_scroll_arrow: Button
+var mobile_scroll_tween: Tween
 
 var mobile_page_background: ColorRect
 var mobile_background: TextureRect
@@ -491,6 +493,8 @@ func _try_skip_dialogue_with_click(event: InputEvent) -> void:
 	if not event is InputEventMouseButton:
 		return
 	if event.button_index != MOUSE_BUTTON_LEFT or not event.pressed:
+		return
+	if is_instance_valid(mobile_scroll_arrow) and mobile_scroll_arrow.is_visible_in_tree() and mobile_scroll_arrow.get_global_rect().has_point(event.position):
 		return
 	# 설정/참가자 UI 클릭은 대사 스킵보다 먼저 보장한다.
 	if SettingsOverlay.is_pointer_over_interactive_control(event.position):
@@ -1202,10 +1206,44 @@ func _create_mobile_scroll() -> void:
 	add_child(mobile_scroll)
 	mobile_scroll.z_index = 100
 	mobile_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+	mobile_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	mobile_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 
 	mobile_content = Control.new()
 	mobile_content.mouse_filter = Control.MOUSE_FILTER_PASS
 	mobile_scroll.add_child(mobile_content)
+	mobile_scroll_arrow = Button.new()
+	add_child(mobile_scroll_arrow)
+	mobile_scroll_arrow.z_index = 400
+	mobile_scroll_arrow.text = "↓"
+	mobile_scroll_arrow.focus_mode = Control.FOCUS_NONE
+	mobile_scroll_arrow.add_theme_font_size_override("font_size", 36)
+	var arrow_style := StyleBoxFlat.new()
+	arrow_style.bg_color = Color("#181b1f")
+	arrow_style.border_color = Color("#666a70")
+	arrow_style.set_border_width_all(1)
+	arrow_style.set_corner_radius_all(28)
+	mobile_scroll_arrow.add_theme_stylebox_override("normal", arrow_style)
+	mobile_scroll_arrow.pressed.connect(_on_mobile_scroll_arrow_pressed)
+	mobile_scroll.get_v_scroll_bar().value_changed.connect(_update_mobile_scroll_arrow)
+	mobile_scroll.get_v_scroll_bar().changed.connect(_update_mobile_scroll_arrow)
+
+
+func _update_mobile_scroll_arrow(_value: float = 0.0) -> void:
+	var bar := mobile_scroll.get_v_scroll_bar()
+	var bottom := maxf(0.0, bar.max_value - bar.page)
+	mobile_scroll_arrow.visible = mobile_scroll.visible and bottom > 1.0
+	mobile_scroll_arrow.text = "↑" if bar.value >= bottom - 1.0 else "↓"
+
+
+func _on_mobile_scroll_arrow_pressed() -> void:
+	var bar := mobile_scroll.get_v_scroll_bar()
+	var bottom := maxf(0.0, bar.max_value - bar.page)
+	var target := 0.0 if bar.value >= bottom - 1.0 else minf(bottom, bar.value + mobile_scroll.size.y * 0.65)
+	if mobile_scroll_tween != null and mobile_scroll_tween.is_running():
+		mobile_scroll_tween.kill()
+	mobile_scroll_tween = create_tween()
+	mobile_scroll_tween.tween_property(mobile_scroll, "scroll_vertical", int(target), 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 # =========================================================
@@ -1893,7 +1931,7 @@ func _setup_mobile_web_input_bridge() -> void:
 			title.textContent = '생존 기록';
 			cancel.textContent = '닫기';
 			submit.textContent = '등록';
-			field.placeholder = '대사 또는 기록 입력 · 수정버전8';
+			field.placeholder = '대사 또는 기록 입력 · 수정버전9';
 			Object.assign(title.style, { display: 'block', fontSize: '20px', lineHeight: '1.3' });
 			Object.assign(composer.style, {
 				position: 'fixed', display: 'none', zIndex: '2147483647',
@@ -2172,6 +2210,7 @@ func _set_mobile_ui_visible(
 ) -> void:
 
 	mobile_scroll.visible = value
+	_update_mobile_scroll_arrow()
 	mobile_page_background.visible = value
 	mobile_background.visible = value
 
@@ -2864,15 +2903,17 @@ func _update_mobile_scroll_content(viewport_size: Vector2) -> void:
 		viewport_size.y,
 		mobile_discussion_panel.position.y
 			+ mobile_discussion_panel.size.y
-			+ MOBILE_GAP
+			+ 80.0
 	)
 
 	mobile_scroll.position = Vector2.ZERO
 	mobile_scroll.size = viewport_size
-	mobile_content.position = Vector2.ZERO
 	mobile_content.custom_minimum_size = Vector2(viewport_size.x, content_height)
 	mobile_content.size = Vector2(viewport_size.x, content_height)
 	mobile_page_background.size = Vector2(viewport_size.x, content_height)
+	mobile_scroll_arrow.position = Vector2(viewport_size.x - 76.0, viewport_size.y - 76.0)
+	mobile_scroll_arrow.size = Vector2(56.0, 56.0)
+	call_deferred("_update_mobile_scroll_arrow")
 
 
 # =========================================================
