@@ -13,6 +13,7 @@ extends Control
 )
 
 const HOSPITAL_EXTERIOR_BACKGROUND := preload("res://hospital_exterior.png")
+const HOSPITAL_GARDEN_BACKGROUND := preload("res://hospital_garden.png")
 
 
 # =========================================================
@@ -140,22 +141,35 @@ func _load_episode_dialogue_data() -> void:
 
 
 func _apply_episode_background(dialogue_file: String) -> void:
-	# Dialogue 1 and 2 share main.tscn's background node. Replace only that
-	# node's texture for the hospital episode; the graph itself remains unchanged.
 	if dialogue_file != "res://hospital_dialogue.tres":
 		return
+	_set_episode_background_texture(HOSPITAL_EXTERIOR_BACKGROUND)
+
+
+func _set_episode_background_texture(texture: Texture2D) -> void:
 	if school_background is Sprite2D:
 		var background_sprite := school_background as Sprite2D
-		background_sprite.texture = HOSPITAL_EXTERIOR_BACKGROUND
-		# The hospital asset has a slightly different aspect ratio from the original
-		# school image. Cover the whole PC game area to prevent a one-pixel top seam.
+		background_sprite.texture = texture
 		var target_size := Vector2(1152.0, 648.0)
-		var source_size := HOSPITAL_EXTERIOR_BACKGROUND.get_size()
+		var source_size := texture.get_size()
 		var cover_scale := maxf(target_size.x / source_size.x, target_size.y / source_size.y)
 		background_sprite.scale = Vector2(cover_scale, cover_scale)
 		background_sprite.position = target_size * 0.5
 	elif school_background is TextureRect:
-		(school_background as TextureRect).texture = HOSPITAL_EXTERIOR_BACKGROUND
+		(school_background as TextureRect).texture = texture
+	if is_instance_valid(mobile_background):
+		mobile_background.texture = texture
+
+
+func _update_hospital_dialogue_background(speaker: String) -> void:
+	if RoomManager.get_dialogue_file().strip_edges() != "res://hospital_dialogue.tres":
+		return
+	# Dialogue 5 begins the flowerbed route. The background stays there for
+	# its following flowerbed dialogue nodes, without changing the graph.
+	if speaker.strip_edges() == "[화단]":
+		_set_episode_background_texture(HOSPITAL_GARDEN_BACKGROUND)
+	else:
+		_set_episode_background_texture(HOSPITAL_EXTERIOR_BACKGROUND)
 
 
 # =========================================================
@@ -2554,6 +2568,7 @@ func _on_dialogue_processed(
 	current_speaker_text = str(
 		dialogue_box.speaker_label.text
 	).strip_edges()
+	_update_hospital_dialogue_background(current_speaker_text)
 
 
 	current_dialogue_text = str(
