@@ -1877,7 +1877,7 @@ func _setup_mobile_web_input_bridge() -> void:
 			title.textContent = '생존 기록';
 			cancel.textContent = '닫기';
 			submit.textContent = '등록';
-			field.placeholder = '대사 또는 기록 입력 · 수정버전3';
+			field.placeholder = '대사 또는 기록 입력 · 수정버전4';
 			Object.assign(composer.style, {
 				position: 'fixed', display: 'none', zIndex: '2147483647',
 				background: 'rgba(0, 0, 0, 0.72)', boxSizing: 'border-box',
@@ -1917,9 +1917,11 @@ func _setup_mobile_web_input_bridge() -> void:
 			cancel.addEventListener('click', () => {
 				if (window.__surviveMobileTextCancel) window.__surviveMobileTextCancel();
 			});
-			submit.addEventListener('click', () => {
+			let pendingSubmit = null;
+			submit.addEventListener('click', (event) => {
+				event.preventDefault();
+				pendingSubmit = field.value;
 				sendValue();
-				if (window.__surviveMobileTextSubmit) window.__surviveMobileTextSubmit(field.value);
 			});
 			const layoutComposer = () => {
 				const viewport = window.visualViewport;
@@ -1942,6 +1944,11 @@ func _setup_mobile_web_input_bridge() -> void:
 					field.setSelectionRange(field.value.length, field.value.length);
 				},
 				read() { return field.value; },
+				consumeSubmit() {
+					const value = pendingSubmit;
+					pendingSubmit = null;
+					return value;
+				},
 				close() { field.blur(); composer.style.display = 'none'; }
 			};
 			if (window.visualViewport && !window.__surviveMobileViewportListener) {
@@ -2046,6 +2053,12 @@ func _process(_delta: float) -> void:
 	if web_text is String and _mobile_web_active_input.text != web_text:
 		_mobile_web_active_input.text = web_text
 		_mobile_web_active_input.caret_column = _mobile_web_active_input.text.length()
+
+	# Some in-app WebViews do not deliver a DOM button click through a
+	# JavaScriptBridge callback. Poll the DOM submit state, just as we poll text.
+	var submitted_text: Variant = _mobile_web_input_bridge.consumeSubmit()
+	if submitted_text is String:
+		_on_mobile_web_composer_submitted([submitted_text])
 
 
 func _on_mobile_web_viewport_changed(args: Array) -> void:
