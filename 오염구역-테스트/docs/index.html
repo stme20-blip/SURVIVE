@@ -92,7 +92,7 @@ body {
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
-<script>(() => { const viewport = document.querySelector('meta[name="viewport"]'); if (viewport) viewport.content = 'width=device-width, user-scalable=no, initial-scale=1.0, viewport-fit=cover, interactive-widget=overlays-content'; if (navigator.virtualKeyboard) navigator.virtualKeyboard.overlaysContent = true; })();</script>
+<script>(() => { const viewport = document.querySelector('meta[name="viewport"]'); if (viewport) viewport.content = 'width=device-width, user-scalable=no, initial-scale=1.0, viewport-fit=cover, interactive-widget=overlays-content'; if (navigator.virtualKeyboard) navigator.virtualKeyboard.overlaysContent = true; let width = 0, height = 0; const lock = () => { const canvas = document.getElementById('canvas'); if (!canvas) return requestAnimationFrame(lock); if (!width || !height) { width = window.innerWidth; height = window.innerHeight; } canvas.style.setProperty('width', width + 'px', 'important'); canvas.style.setProperty('height', height + 'px', 'important'); }; requestAnimationFrame(lock); window.addEventListener('orientationchange', () => { width = 0; height = 0; setTimeout(lock, 250); }); })();</script>
 	</head>
 	<body>
 		<canvas id="canvas">
