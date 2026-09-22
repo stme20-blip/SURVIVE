@@ -285,7 +285,7 @@ func _layout() -> void:
 	_members_button.add_theme_constant_override("icon_max_width", 26 if mobile else 20)
 	if _members_dialog.visible:
 		_set_members_dialog_size(_membership_closed)
-	_root.theme.default_font_size = 24 if mobile else 18
+	_root.theme.default_font_size = 28 if mobile else 18
 	var side := int(maxf(24, (_root.size.x - (640 if mobile else 580)) / 2.0))
 	_margin.add_theme_constant_override("margin_left", side)
 	_margin.add_theme_constant_override("margin_right", side)

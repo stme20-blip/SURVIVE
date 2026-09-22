@@ -323,19 +323,19 @@ const DESKTOP_INSIGHT_GAP := 8.0
 const MOBILE_MARGIN := 14.0
 const MOBILE_GAP := 10.0
 
-const MOBILE_INSIGHT_HEIGHT := 54.0
+const MOBILE_INSIGHT_HEIGHT := 62.0
 
-const MOBILE_PORTRAIT_WIDTH := 82.0
-const MOBILE_PORTRAIT_HEIGHT := 82.0
+const MOBILE_PORTRAIT_WIDTH := 92.0
+const MOBILE_PORTRAIT_HEIGHT := 92.0
 
 # 모바일 대사 행의 최소 높이.
 # 실제 대사가 길면 이 값보다 자동으로 커진다.
-const MOBILE_DIALOGUE_ROW_HEIGHT := 112.0
-const MOBILE_DIALOGUE_TEXT_MIN_HEIGHT := 72.0
-const MOBILE_DIALOGUE_TEXT_MAX_HEIGHT := 220.0
+const MOBILE_DIALOGUE_ROW_HEIGHT := 124.0
+const MOBILE_DIALOGUE_TEXT_MIN_HEIGHT := 82.0
+const MOBILE_DIALOGUE_TEXT_MAX_HEIGHT := 260.0
 
-const MOBILE_OPTION_HEIGHT := 58.0
-const MOBILE_OPTION_GAP := 8.0
+const MOBILE_OPTION_HEIGHT := 68.0
+const MOBILE_OPTION_GAP := 10.0
 
 
 # 원본 파일은 바꾸지 않고, 지정 기본 초상화가 게임에 표시될 때만 가장자리를 부드럽게 어둡게 한다.
@@ -1401,7 +1401,7 @@ func _create_mobile_insight() -> void:
 
 	mobile_insight_label.add_theme_font_size_override(
 		"font_size",
-		20
+		24
 	)
 
 
@@ -1549,7 +1549,7 @@ func _create_mobile_dialogue() -> void:
 
 	mobile_speaker_label.add_theme_font_size_override(
 		"font_size",
-		19
+		23
 	)
 
 
@@ -1581,7 +1581,7 @@ func _create_mobile_dialogue() -> void:
 
 	mobile_dialogue_label.add_theme_font_size_override(
 		"normal_font_size",
-		22
+		26
 	)
 
 
@@ -1661,7 +1661,7 @@ func _create_mobile_discussion() -> void:
 
 	mobile_discussion_title.add_theme_font_size_override(
 		"font_size",
-		26
+		30
 	)
 
 
@@ -1691,7 +1691,7 @@ func _create_mobile_discussion() -> void:
 
 	mobile_discussion_subtitle.add_theme_font_size_override(
 		"font_size",
-		16
+		19
 	)
 
 
@@ -1711,7 +1711,7 @@ func _create_mobile_discussion() -> void:
 
 	mobile_download_button.add_theme_font_size_override(
 		"font_size",
-		16
+		19
 	)
 
 	mobile_download_button.pressed.connect(
@@ -1723,7 +1723,7 @@ func _create_mobile_discussion() -> void:
 	mobile_composer_back_button = Button.new()
 	mobile_discussion_panel.add_child(mobile_composer_back_button)
 	mobile_composer_back_button.text = "뒤로가기"
-	mobile_composer_back_button.add_theme_font_size_override("font_size", 16)
+	mobile_composer_back_button.add_theme_font_size_override("font_size", 19)
 	mobile_composer_back_button.pressed.connect(_on_mobile_composer_back_pressed)
 	mobile_composer_back_button.visible = false
 
@@ -1789,7 +1789,7 @@ func _create_mobile_discussion() -> void:
 
 	mobile_message_input.add_theme_font_size_override(
 		"font_size",
-		19
+		23
 	)
 
 
@@ -1818,7 +1818,7 @@ func _create_mobile_discussion() -> void:
 
 	mobile_submit_button.add_theme_font_size_override(
 		"font_size",
-		18
+		22
 	)
 
 
@@ -1877,7 +1877,7 @@ func _setup_mobile_web_input_bridge() -> void:
 			title.textContent = '생존 기록';
 			cancel.textContent = '닫기';
 			submit.textContent = '등록';
-			field.placeholder = '대사 또는 기록 입력 · 수정버전6';
+			field.placeholder = '대사 또는 기록 입력 · 수정버전7';
 			Object.assign(title.style, { display: 'block', fontSize: '20px', lineHeight: '1.3' });
 			Object.assign(composer.style, {
 				position: 'fixed', display: 'none', zIndex: '2147483647',
@@ -3067,7 +3067,7 @@ func _layout_mobile_dialogue(
 
 		button.add_theme_font_size_override(
 			"font_size",
-			21
+			25
 		)
 
 
@@ -3153,7 +3153,7 @@ func _layout_mobile_dialogue(
 
 		undo_button.add_theme_font_size_override(
 			"font_size",
-			19
+			23
 		)
 
 		undo_button.modulate = Color(
@@ -3221,7 +3221,7 @@ func _layout_mobile_dialogue(
 
 		reselect_button.add_theme_font_size_override(
 			"font_size",
-			19
+			23
 		)
 
 		reselect_button.modulate = Color(
@@ -3738,7 +3738,7 @@ func _add_mobile_scene_header(
 
 	label.add_theme_font_size_override(
 		"font_size",
-		18
+		22
 	)
 
 
@@ -3790,7 +3790,7 @@ func _add_mobile_comment(
 	header.add_child(speaker_label)
 	speaker_label.text = speaker
 	speaker_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	speaker_label.add_theme_font_size_override("font_size", 17)
+	speaker_label.add_theme_font_size_override("font_size", 20)
 	speaker_label.modulate = Color(0.78, 0.81, 0.84, 1.0)
 
 	if (
@@ -3801,8 +3801,8 @@ func _add_mobile_comment(
 		header.add_child(edit_button)
 		edit_button.text = "수정"
 		edit_button.flat = true
-		edit_button.custom_minimum_size = Vector2(58, 30)
-		edit_button.add_theme_font_size_override("font_size", 14)
+		edit_button.custom_minimum_size = Vector2(68, 38)
+		edit_button.add_theme_font_size_override("font_size", 17)
 		edit_button.pressed.connect(
 			_on_mobile_edit_pressed.bind(comment_id)
 		)
@@ -3810,8 +3810,8 @@ func _add_mobile_comment(
 		header.add_child(delete_button)
 		delete_button.text = "삭제"
 		delete_button.flat = true
-		delete_button.custom_minimum_size = Vector2(58, 30)
-		delete_button.add_theme_font_size_override("font_size", 14)
+		delete_button.custom_minimum_size = Vector2(68, 38)
+		delete_button.add_theme_font_size_override("font_size", 17)
 		delete_button.pressed.connect(_on_mobile_delete_pressed.bind(comment_id))
 
 	if mobile_editing_comment_id == comment_id:
@@ -3826,7 +3826,7 @@ func _add_mobile_comment(
 		edit_input.set_meta("mobile_comment_id", comment_id)
 		edit_input.custom_minimum_size = Vector2(0, 48)
 		edit_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		edit_input.add_theme_font_size_override("font_size", 19)
+		edit_input.add_theme_font_size_override("font_size", 23)
 		edit_input.expand_to_text_length = false
 		var edit_style := StyleBoxFlat.new()
 		edit_style.bg_color = Color("#121212")
@@ -3868,7 +3868,7 @@ func _add_mobile_comment(
 	message_label.text = text
 	message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	message_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	message_label.add_theme_font_size_override("font_size", 20)
+	message_label.add_theme_font_size_override("font_size", 24)
 
 
 # =========================================================
@@ -4001,7 +4001,7 @@ func _add_mobile_empty_message(
 
 	label.add_theme_font_size_override(
 		"font_size",
-		18
+		22
 	)
 
 

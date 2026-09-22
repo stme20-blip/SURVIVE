@@ -21,8 +21,10 @@ const DESKTOP_SIZE := Vector2i(
 # 글씨 / 버튼이 모바일에서 크게 보이도록 함
 # =========================================================
 
-const MOBILE_WIDTH := 600
-const MOBILE_MIN_HEIGHT := 1320
+const MOBILE_WIDTH := 720
+# Keep the logical canvas at the device's actual portrait aspect ratio.  A
+# 1320px floor made normal phone viewports letterbox horizontally.
+const MOBILE_MIN_HEIGHT := 900
 
 
 var mobile_portrait: bool = false
