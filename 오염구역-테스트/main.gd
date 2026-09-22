@@ -1932,6 +1932,7 @@ func _open_mobile_web_input(input: LineEdit) -> void:
 	# Naver's app shrinks the canvas when its keyboard opens; keeping only this
 	# panel visible makes that resize intentional instead of shrinking the game.
 	_mobile_comment_composer_mode = ScreenLayout.is_mobile_portrait()
+	SettingsOverlay.set_mobile_comment_composer_mode(_mobile_comment_composer_mode)
 	_apply_current_layout()
 	_mobile_web_active_input = input
 	_place_mobile_web_input()
@@ -2017,6 +2018,7 @@ func _finish_mobile_comment_composer() -> void:
 	_mobile_comment_composer_mode = false
 	_mobile_keyboard_height_px = 0.0
 	_mobile_keyboard_canvas_ratio = 0.0
+	SettingsOverlay.set_mobile_comment_composer_mode(false)
 	_close_mobile_web_input()
 	_apply_current_layout()
 
@@ -2597,10 +2599,8 @@ func _apply_mobile_layout() -> void:
 		mobile_insight_panel.visible = false
 		mobile_dialogue_panel.visible = false
 		mobile_portrait_panel.visible = false
-		var composer_height := maxf(
-			240.0,
-			viewport_size.y * (1.0 - _mobile_keyboard_canvas_ratio)
-		)
+		var available_composer_height := viewport_size.y * (1.0 - _mobile_keyboard_canvas_ratio)
+		var composer_height := clampf(available_composer_height, 300.0, 460.0)
 		# The visible area above the keyboard is wider than it is tall. Lay out
 		# the record panel inside that area instead of scaling the full portrait
 		# game canvas down into it.

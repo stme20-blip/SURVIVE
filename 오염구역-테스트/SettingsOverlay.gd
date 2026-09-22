@@ -38,6 +38,7 @@ var _settings_return_underline: ColorRect
 var _pending_portrait: Image
 var _room_id: String = ""
 var _was_paused: bool = false
+var _mobile_comment_composer_mode := false
 
 
 func _ready() -> void:
@@ -267,7 +268,7 @@ func _layout() -> void:
 	_gear.add_theme_constant_override("icon_max_width", 26 if mobile else 20)
 	var right_inset := 12.0
 	var scene := get_tree().current_scene
-	_gear.visible = scene != null and scene.scene_file_path == "res://main.tscn"
+	_gear.visible = scene != null and scene.scene_file_path == "res://main.tscn" and not _mobile_comment_composer_mode
 	_members_button.visible = _gear.visible and (RoomManager.has_active_online_room() or _membership_closed)
 	if not _gear.visible and _modal.visible:
 		close_settings()
@@ -294,6 +295,16 @@ func _layout() -> void:
 	_portrait.custom_minimum_size = Vector2(120, 120) if mobile else Vector2(84, 84)
 	for control in [_name, _portrait_button, _traits, _save_button, _cancel_button]:
 		control.custom_minimum_size.y = 60 if mobile else 40
+
+
+func set_mobile_comment_composer_mode(active: bool) -> void:
+
+	_mobile_comment_composer_mode = active
+	if active:
+		close_settings()
+		if is_instance_valid(_members_dialog):
+			_members_dialog.hide()
+	_layout()
 
 
 func is_pointer_over_interactive_control(pointer_position: Vector2) -> bool:
