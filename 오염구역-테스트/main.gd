@@ -230,6 +230,8 @@ var mobile_editing_comment_id: String = ""
 var _mobile_web_input_bridge: JavaScriptObject
 var _mobile_web_input_callback: JavaScriptObject
 var _mobile_web_viewport_callback: JavaScriptObject
+var _mobile_web_submit_callback: JavaScriptObject
+var _mobile_web_cancel_callback: JavaScriptObject
 var _mobile_web_active_input: LineEdit
 var _mobile_keyboard_height_px := 0.0
 var _mobile_keyboard_canvas_ratio := 0.0
@@ -1842,52 +1844,95 @@ func _setup_mobile_web_input_bridge() -> void:
 	_mobile_web_viewport_callback = JavaScriptBridge.create_callback(
 		_on_mobile_web_viewport_changed
 	)
+	_mobile_web_submit_callback = JavaScriptBridge.create_callback(
+		_on_mobile_web_composer_submitted
+	)
+	_mobile_web_cancel_callback = JavaScriptBridge.create_callback(
+		_on_mobile_web_composer_cancelled
+	)
 
 	var browser_window := JavaScriptBridge.get_interface("window")
 	browser_window.__surviveMobileTextChanged = _mobile_web_input_callback
 	browser_window.__surviveMobileViewportChanged = _mobile_web_viewport_callback
+	browser_window.__surviveMobileTextSubmit = _mobile_web_submit_callback
+	browser_window.__surviveMobileTextCancel = _mobile_web_cancel_callback
 
 	JavaScriptBridge.eval("""
 		if (!window.surviveMobileText) {
-			const field = document.createElement('input');
-			field.type = 'text';
+			const composer = document.createElement('div');
+			const card = document.createElement('div');
+			const title = document.createElement('strong');
+			const actions = document.createElement('div');
+			const cancel = document.createElement('button');
+			const submit = document.createElement('button');
+			const field = document.createElement('textarea');
 			field.inputMode = 'text';
 			field.autocomplete = 'off';
 			field.autocorrect = 'on';
 			field.autocapitalize = 'sentences';
 			field.spellcheck = false;
-			Object.assign(field.style, {
-				position: 'fixed', left: '0', top: '0', width: '1px', height: '1px',
-				opacity: '0.01', color: 'transparent', caretColor: 'transparent',
-				background: 'transparent', border: '0', padding: '0', margin: '0',
-				fontSize: '16px', zIndex: '2147483647', pointerEvents: 'none'
+			field.rows = 3;
+			title.textContent = '생존 기록 작성';
+			cancel.textContent = '뒤로가기';
+			submit.textContent = '등록';
+			Object.assign(composer.style, {
+				position: 'fixed', display: 'none', zIndex: '2147483647',
+				background: 'rgba(0, 0, 0, 0.72)', boxSizing: 'border-box',
+				padding: '12px', touchAction: 'auto'
 			});
-			document.body.appendChild(field);
+			Object.assign(card.style, {
+				position: 'absolute', left: '12px', right: '12px', bottom: '12px',
+				padding: '14px', background: '#18191c', border: '1px solid #33363d',
+				borderRadius: '12px', color: '#f3f3f3', fontFamily: 'sans-serif',
+				boxSizing: 'border-box', boxShadow: '0 8px 24px rgba(0,0,0,.4)'
+			});
+			Object.assign(field.style, {
+				display: 'block', width: '100%', minHeight: '76px', resize: 'none',
+				boxSizing: 'border-box', margin: '10px 0 12px', padding: '10px',
+				fontSize: '16px', lineHeight: '1.4', color: '#f3f3f3', caretColor: '#fff',
+				background: '#0d0e10', border: '1px solid #4a4d55', borderRadius: '7px'
+			});
+			Object.assign(actions.style, { display: 'flex', gap: '8px', justifyContent: 'flex-end' });
+			Object.assign(cancel.style, { minWidth: '88px', height: '40px', color: '#eee', background: '#292b30', border: '0', borderRadius: '6px', fontSize: '15px' });
+			Object.assign(submit.style, { minWidth: '76px', height: '40px', color: '#111', background: '#f1f1f1', border: '0', borderRadius: '6px', fontSize: '15px', fontWeight: '700' });
+			document.body.appendChild(composer);
+			composer.appendChild(card);
+			card.appendChild(title);
+			card.appendChild(field);
+			card.appendChild(actions);
+			actions.appendChild(cancel);
+			actions.appendChild(submit);
 			const sendValue = () => {
 				if (window.__surviveMobileTextChanged) window.__surviveMobileTextChanged(field.value);
 			};
 			field.addEventListener('input', sendValue);
 			field.addEventListener('change', sendValue);
 			field.addEventListener('compositionend', sendValue);
+			cancel.addEventListener('click', () => {
+				if (window.__surviveMobileTextCancel) window.__surviveMobileTextCancel();
+			});
+			submit.addEventListener('click', () => {
+				sendValue();
+				if (window.__surviveMobileTextSubmit) window.__surviveMobileTextSubmit(field.value);
+			});
+			const layoutComposer = () => {
+				const viewport = window.visualViewport;
+				composer.style.left = `${viewport ? viewport.offsetLeft : 0}px`;
+				composer.style.top = `${viewport ? viewport.offsetTop : 0}px`;
+				composer.style.width = `${viewport ? viewport.width : window.innerWidth}px`;
+				composer.style.height = `${viewport ? viewport.height : window.innerHeight}px`;
+			};
 			window.surviveMobileText = {
-				place(value, x, y, width, height) {
-					const canvas = document.getElementById('canvas');
-					if (!canvas) return;
-					const bounds = canvas.getBoundingClientRect();
-					field.value = value || '';
-					field.style.left = `${bounds.left + (x * bounds.width)}px`;
-					field.style.top = `${bounds.top + (y * bounds.height)}px`;
-					field.style.width = `${Math.max(2, width * bounds.width)}px`;
-					field.style.height = `${Math.max(2, height * bounds.height)}px`;
-					field.style.pointerEvents = 'auto';
-				},
+				place(value) { field.value = value || ''; },
 				open(value) {
 					field.value = value || '';
+					layoutComposer();
+					composer.style.display = 'block';
 					field.focus({ preventScroll: true });
 					field.setSelectionRange(field.value.length, field.value.length);
 				},
 				read() { return field.value; },
-				close() { field.blur(); field.style.pointerEvents = 'none'; }
+				close() { field.blur(); composer.style.display = 'none'; }
 			};
 			if (window.visualViewport && !window.__surviveMobileViewportListener) {
 				window.__surviveMobileViewportListener = () => {
@@ -1897,6 +1942,8 @@ func _setup_mobile_web_input_bridge() -> void:
 					if (window.__surviveMobileViewportChanged) window.__surviveMobileViewportChanged(keyboard, canvasHeight);
 				};
 				window.visualViewport.addEventListener('resize', window.__surviveMobileViewportListener);
+				window.visualViewport.addEventListener('resize', layoutComposer);
+				window.visualViewport.addEventListener('scroll', layoutComposer);
 			}
 		}
 	""", true)
@@ -1928,14 +1975,11 @@ func _open_mobile_web_input(input: LineEdit) -> void:
 	if _mobile_web_input_bridge == null:
 		return
 
-	# In portrait Web views, compose in a dedicated survival-record screen.
-	# Naver's app shrinks the canvas when its keyboard opens; keeping only this
-	# panel visible makes that resize intentional instead of shrinking the game.
-	_mobile_comment_composer_mode = ScreenLayout.is_mobile_portrait()
-	SettingsOverlay.set_mobile_comment_composer_mode(_mobile_comment_composer_mode)
-	_apply_current_layout()
+	# The native browser composer is drawn above the canvas, so browser-specific
+	# canvas resizing cannot make the text field tiny or hide it behind a keyboard.
+	_mobile_comment_composer_mode = false
+	SettingsOverlay.set_mobile_comment_composer_mode(true)
 	_mobile_web_active_input = input
-	_place_mobile_web_input()
 	_mobile_web_input_bridge.open(input.text)
 
 
@@ -1943,6 +1987,10 @@ func _place_mobile_web_input() -> void:
 
 	if not OS.has_feature("web") or _mobile_web_input_bridge == null:
 		return
+
+	# The DOM composer positions itself from visualViewport. It must not be
+	# repositioned from Godot's canvas coordinates while the keyboard is open.
+	return
 
 	if not is_instance_valid(_mobile_web_active_input) or not _mobile_web_active_input.is_visible_in_tree():
 		_close_mobile_web_input()
@@ -2021,6 +2069,18 @@ func _finish_mobile_comment_composer() -> void:
 	SettingsOverlay.set_mobile_comment_composer_mode(false)
 	_close_mobile_web_input()
 	_apply_current_layout()
+
+
+func _on_mobile_web_composer_submitted(args: Array) -> void:
+
+	_on_mobile_web_input_changed(args)
+	_finish_mobile_comment_composer()
+	call_deferred("_submit_mobile_comment_after_ime")
+
+
+func _on_mobile_web_composer_cancelled(_args: Array) -> void:
+
+	_finish_mobile_comment_composer()
 
 
 func _on_mobile_composer_back_pressed() -> void:
