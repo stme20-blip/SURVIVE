@@ -231,6 +231,7 @@ var _mobile_web_input_callback: JavaScriptObject
 var _mobile_web_viewport_callback: JavaScriptObject
 var _mobile_web_active_input: LineEdit
 var _mobile_keyboard_height_px := 0.0
+var _mobile_comment_composer_mode := false
 
 
 # =========================================================
@@ -1914,6 +1915,11 @@ func _open_mobile_web_input(input: LineEdit) -> void:
 	if _mobile_web_input_bridge == null:
 		return
 
+	# In portrait Web views, compose in a dedicated survival-record screen.
+	# Naver's app shrinks the canvas when its keyboard opens; keeping only this
+	# panel visible makes that resize intentional instead of shrinking the game.
+	_mobile_comment_composer_mode = ScreenLayout.is_mobile_portrait()
+	_apply_current_layout()
 	_mobile_web_active_input = input
 	_place_mobile_web_input()
 	_mobile_web_input_bridge.open(input.text)
@@ -1985,6 +1991,14 @@ func _close_mobile_web_input() -> void:
 		_mobile_web_input_bridge.close()
 
 	_mobile_web_active_input = null
+
+
+func _finish_mobile_comment_composer() -> void:
+
+	_mobile_comment_composer_mode = false
+	_mobile_keyboard_height_px = 0.0
+	_close_mobile_web_input()
+	_apply_current_layout()
 
 
 func _sync_mobile_web_input_now() -> void:
@@ -2552,6 +2566,15 @@ func _apply_mobile_layout() -> void:
 	_set_mobile_ui_visible(
 		true
 	)
+
+	if _mobile_comment_composer_mode:
+		mobile_background.visible = false
+		mobile_insight_panel.visible = false
+		mobile_dialogue_panel.visible = false
+		mobile_portrait_panel.visible = false
+		_layout_mobile_discussion(0.0, viewport_size)
+		_raise_mobile_discussion_above_keyboard(viewport_size)
+		return
 
 
 	# =====================================================
@@ -3391,7 +3414,7 @@ func _on_mobile_message_submitted(
 ) -> void:
 
 	_sync_mobile_web_input_now()
-	_close_mobile_web_input()
+	_finish_mobile_comment_composer()
 	mobile_message_input.apply_ime()
 
 
@@ -3407,7 +3430,7 @@ func _on_mobile_message_submitted(
 func _on_mobile_submit_pressed() -> void:
 
 	_sync_mobile_web_input_now()
-	_close_mobile_web_input()
+	_finish_mobile_comment_composer()
 	mobile_message_input.apply_ime()
 
 
