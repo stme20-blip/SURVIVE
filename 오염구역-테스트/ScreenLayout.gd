@@ -39,6 +39,13 @@ var _applying := false
 # =========================================================
 
 func _ready() -> void:
+	if OS.has_feature("web"):
+		_setup_browser_size()
+		var timer := Timer.new()
+		timer.wait_time = 0.2
+		timer.timeout.connect(_apply_layout)
+		add_child(timer)
+		timer.start()
 
 	get_viewport().size_changed.connect(
 		_on_viewport_size_changed
@@ -67,12 +74,6 @@ func _on_viewport_size_changed() -> void:
 	if _applying:
 		return
 
-	# On mobile Web, opening the browser keyboard can resize the canvas even
-	# though the device has not rotated. Keep the already-selected portrait
-	# layout until a fresh page load rather than switching to desktop layout.
-	if OS.has_feature("web") and mobile_portrait:
-		return
-
 	call_deferred(
 		"_apply_layout"
 	)
@@ -91,6 +92,10 @@ func _apply_layout() -> void:
 	var physical_size := (
 		DisplayServer.window_get_size()
 	)
+	if OS.has_feature("web"):
+		var dimensions: Variant = JSON.parse_string(str(JavaScriptBridge.eval("window.surviveLayoutSize()", true)))
+		if dimensions is Array and dimensions.size() == 2:
+			physical_size = Vector2i(int(dimensions[0]), int(dimensions[1]))
 
 
 	if (
@@ -193,17 +198,28 @@ func _apply_layout() -> void:
 
 
 func _is_portrait_display(physical_size: Vector2i) -> bool:
-
-	# A mobile browser can reduce the Godot viewport while its keyboard is
-	# visible. That is not a device rotation, so use the physical screen size
-	# on Web exports and only fall back to the window dimensions elsewhere.
-	if OS.has_feature("web"):
-		var browser_portrait: Variant = JavaScriptBridge.eval(
-			"window.screen.height >= window.screen.width;",
-			true
-		)
-
-		if browser_portrait is bool:
-			return browser_portrait
-
 	return physical_size.y > physical_size.x
+
+
+func _setup_browser_size() -> void:
+	JavaScriptBridge.eval("""
+		(() => {
+			let previous = null;
+			let keyboardSize = null;
+			window.surviveLayoutSize = () => {
+				const width = window.innerWidth;
+				const height = window.innerHeight;
+				const rotation = window.screen.orientation ? window.screen.orientation.angle : (window.orientation || 0);
+				const active = document.activeElement;
+				const editing = active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT' || active.isContentEditable);
+				const touch = navigator.maxTouchPoints > 0;
+				const sameFrame = previous && previous.rotation === rotation && Math.abs(previous.width - width) < 2;
+				// Freeze only a keyboard-related height reduction, never a real rotation or width change.
+				if (touch && sameFrame && editing && height < previous.height - 100) keyboardSize = previous;
+				if (keyboardSize && (!sameFrame || height >= keyboardSize.height - 100)) keyboardSize = null;
+				if (keyboardSize) return JSON.stringify([width, keyboardSize.height]);
+				previous = {width, height, rotation};
+				return JSON.stringify([width, height]);
+			};
+		})();
+	""", true)
