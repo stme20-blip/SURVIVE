@@ -1922,10 +1922,14 @@ func _setup_mobile_web_input_bridge() -> void:
 			});
 			const layoutComposer = () => {
 				const viewport = window.visualViewport;
+				const keyboard = navigator.virtualKeyboard && navigator.virtualKeyboard.boundingRect;
+				const keyboardHeight = keyboard && keyboard.height ? keyboard.height : 0;
+				const width = viewport ? viewport.width : window.innerWidth;
+				const height = keyboardHeight > 0 ? window.innerHeight - keyboardHeight : (viewport ? viewport.height : window.innerHeight);
 				composer.style.left = `${viewport ? viewport.offsetLeft : 0}px`;
 				composer.style.top = `${viewport ? viewport.offsetTop : 0}px`;
-				composer.style.width = `${viewport ? viewport.width : window.innerWidth}px`;
-				composer.style.height = `${viewport ? viewport.height : window.innerHeight}px`;
+				composer.style.width = `${width}px`;
+				composer.style.height = `${Math.max(0, height)}px`;
 			};
 			window.surviveMobileText = {
 				place(value) { field.value = value || ''; },
@@ -1950,6 +1954,7 @@ func _setup_mobile_web_input_bridge() -> void:
 				window.visualViewport.addEventListener('resize', layoutComposer);
 				window.visualViewport.addEventListener('scroll', layoutComposer);
 			}
+			if (navigator.virtualKeyboard) navigator.virtualKeyboard.addEventListener('geometrychange', layoutComposer);
 		}
 	""", true)
 
@@ -2079,13 +2084,30 @@ func _finish_mobile_comment_composer() -> void:
 func _on_mobile_web_composer_submitted(args: Array) -> void:
 
 	_on_mobile_web_input_changed(args)
+	var edit_comment_id := ""
+	if is_instance_valid(_mobile_web_active_input) and _mobile_web_active_input.has_meta("mobile_comment_id"):
+		edit_comment_id = str(_mobile_web_active_input.get_meta("mobile_comment_id"))
+	var submitted_text := _mobile_web_active_input.text if is_instance_valid(_mobile_web_active_input) else ""
 	_finish_mobile_comment_composer()
-	call_deferred("_submit_mobile_comment_after_ime")
+	if edit_comment_id.is_empty():
+		call_deferred("_submit_mobile_comment_after_ime")
+	else:
+		call_deferred("_submit_mobile_edit_text", edit_comment_id, submitted_text)
 
 
 func _on_mobile_web_composer_cancelled(_args: Array) -> void:
 
 	_finish_mobile_comment_composer()
+
+
+func _submit_mobile_edit_text(comment_id: String, submitted_text: String) -> void:
+
+	var new_text := submitted_text.strip_edges()
+	if new_text.is_empty():
+		return
+
+	mobile_editing_comment_id = ""
+	await CommentSync.edit(comment_id, new_text)
 
 
 func _on_mobile_composer_back_pressed() -> void:
@@ -3782,6 +3804,7 @@ func _add_mobile_comment(
 			_on_mobile_comment_input_gui_input.bind(edit_input)
 		)
 		edit_input.text = text
+		edit_input.set_meta("mobile_comment_id", comment_id)
 		edit_input.custom_minimum_size = Vector2(0, 48)
 		edit_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		edit_input.add_theme_font_size_override("font_size", 19)
