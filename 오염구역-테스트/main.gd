@@ -1877,7 +1877,7 @@ func _setup_mobile_web_input_bridge() -> void:
 			title.textContent = '생존 기록';
 			cancel.textContent = '닫기';
 			submit.textContent = '등록';
-			field.placeholder = '대사 또는 기록 입력 · 수정버전4';
+			field.placeholder = '대사 또는 기록 입력 · 수정버전5';
 			Object.assign(composer.style, {
 				position: 'fixed', display: 'none', zIndex: '2147483647',
 				background: 'rgba(0, 0, 0, 0.72)', boxSizing: 'border-box',
@@ -1922,6 +1922,7 @@ func _setup_mobile_web_input_bridge() -> void:
 				event.preventDefault();
 				pendingSubmit = field.value;
 				sendValue();
+				if (window.__surviveMobileTextSubmit) window.__surviveMobileTextSubmit(field.value);
 			});
 			const layoutComposer = () => {
 				const viewport = window.visualViewport;
@@ -1937,6 +1938,7 @@ func _setup_mobile_web_input_bridge() -> void:
 			window.surviveMobileText = {
 				place(value) { field.value = value || ''; },
 				open(value) {
+					pendingSubmit = null;
 					field.value = value || '';
 					layoutComposer();
 					composer.style.display = 'block';
