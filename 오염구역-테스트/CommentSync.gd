@@ -34,7 +34,7 @@ func refresh() -> void:
 func submit(author: String, body: String) -> void:
 	if not RoomManager.has_active_online_room():
 		RoomManager.add_comment(author, body); return
-	var state := RoomManager.get_game_state()
+	var state: Dictionary = RoomManager.get_game_state()
 	var online: Dictionary = RoomManager.current_room.get("online_room", {})
 	var result: Dictionary = await _write_service.room_comments({"action":"create","room_id":str(online.get("room_id", "")),"author_name":author,"body":body,"scene_id":str(state.get("scene_id", "")),"scene_title":str(state.get("scene_title", ""))})
 	if result.has("error"):
