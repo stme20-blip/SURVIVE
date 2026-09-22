@@ -187,6 +187,9 @@ var episode_back_button: Button
 # 모바일 전체 UI
 # =========================================================
 
+var mobile_scroll: ScrollContainer
+var mobile_content: Control
+
 var mobile_page_background: ColorRect
 var mobile_background: TextureRect
 
@@ -1185,11 +1188,24 @@ func _on_episode_back_pressed() -> void:
 
 func _create_mobile_ui() -> void:
 
+	_create_mobile_scroll()
 	_create_mobile_page_background()
 	_create_mobile_background()
 	_create_mobile_insight()
 	_create_mobile_dialogue()
 	_create_mobile_discussion()
+
+
+func _create_mobile_scroll() -> void:
+
+	mobile_scroll = ScrollContainer.new()
+	add_child(mobile_scroll)
+	mobile_scroll.z_index = 100
+	mobile_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	mobile_content = Control.new()
+	mobile_content.mouse_filter = Control.MOUSE_FILTER_PASS
+	mobile_scroll.add_child(mobile_content)
 
 
 # =========================================================
@@ -1200,7 +1216,7 @@ func _create_mobile_page_background() -> void:
 
 	mobile_page_background = ColorRect.new()
 
-	add_child(
+	mobile_content.add_child(
 		mobile_page_background
 	)
 
@@ -1226,7 +1242,7 @@ func _create_mobile_background() -> void:
 
 	mobile_background = TextureRect.new()
 
-	add_child(
+	mobile_content.add_child(
 		mobile_background
 	)
 
@@ -1336,7 +1352,7 @@ func _create_mobile_insight() -> void:
 
 	mobile_insight_panel = Panel.new()
 
-	add_child(
+	mobile_content.add_child(
 		mobile_insight_panel
 	)
 
@@ -1413,7 +1429,7 @@ func _create_mobile_dialogue() -> void:
 
 	mobile_dialogue_panel = Panel.new()
 
-	add_child(
+	mobile_content.add_child(
 		mobile_dialogue_panel
 	)
 
@@ -1610,7 +1626,7 @@ func _create_mobile_discussion() -> void:
 
 	mobile_discussion_panel = Panel.new()
 
-	add_child(
+	mobile_content.add_child(
 		mobile_discussion_panel
 	)
 
@@ -1877,7 +1893,7 @@ func _setup_mobile_web_input_bridge() -> void:
 			title.textContent = '생존 기록';
 			cancel.textContent = '닫기';
 			submit.textContent = '등록';
-			field.placeholder = '대사 또는 기록 입력 · 수정버전7';
+			field.placeholder = '대사 또는 기록 입력 · 수정버전8';
 			Object.assign(title.style, { display: 'block', fontSize: '20px', lineHeight: '1.3' });
 			Object.assign(composer.style, {
 				position: 'fixed', display: 'none', zIndex: '2147483647',
@@ -2155,6 +2171,7 @@ func _set_mobile_ui_visible(
 	value: bool
 ) -> void:
 
+	mobile_scroll.visible = value
 	mobile_page_background.visible = value
 	mobile_background.visible = value
 
@@ -2834,6 +2851,28 @@ func _apply_mobile_layout() -> void:
 	)
 
 	_raise_mobile_discussion_above_keyboard(viewport_size)
+	_update_mobile_scroll_content(viewport_size)
+
+
+func _update_mobile_scroll_content(viewport_size: Vector2) -> void:
+
+	# The dialogue, choices, and survival-record panel can be taller than a
+	# phone viewport once accessible mobile font sizes are used. Keep their
+	# natural height and let ScrollContainer provide the vertical page scroll
+	# instead of clipping the bottom controls behind browser chrome.
+	var content_height := maxf(
+		viewport_size.y,
+		mobile_discussion_panel.position.y
+			+ mobile_discussion_panel.size.y
+			+ MOBILE_GAP
+	)
+
+	mobile_scroll.position = Vector2.ZERO
+	mobile_scroll.size = viewport_size
+	mobile_content.position = Vector2.ZERO
+	mobile_content.custom_minimum_size = Vector2(viewport_size.x, content_height)
+	mobile_content.size = Vector2(viewport_size.x, content_height)
+	mobile_page_background.size = Vector2(viewport_size.x, content_height)
 
 
 # =========================================================
