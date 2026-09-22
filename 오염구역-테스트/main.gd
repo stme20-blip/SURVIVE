@@ -14,6 +14,7 @@ extends Control
 
 const HOSPITAL_EXTERIOR_BACKGROUND := preload("res://hospital_exterior.png")
 const HOSPITAL_GARDEN_BACKGROUND := preload("res://hospital_garden.png")
+const HOSPITAL_FLOWERBED_CLOSEUP_BACKGROUND := preload("res://hospital_flowerbed_closeup.png")
 
 
 # =========================================================
@@ -161,11 +162,14 @@ func _set_episode_background_texture(texture: Texture2D) -> void:
 		mobile_background.texture = texture
 
 
-func _update_hospital_dialogue_background(speaker: String) -> void:
+func _update_hospital_dialogue_background(speaker: String, dialogue: String) -> void:
 	if RoomManager.get_dialogue_file().strip_edges() != "res://hospital_dialogue.tres":
 		return
-	# Dialogue 5 begins the flowerbed route. The background stays there for
-	# its following flowerbed dialogue nodes, without changing the graph.
+	# Dialogue 6 is the close inspection of the flowerbed. Keep its dedicated
+	# close-up separate from Dialogue 5's wider flowerbed-arrival background.
+	if dialogue.strip_edges().begins_with("잡초와 시든 꽃이 가득한 화단"):
+		_set_episode_background_texture(HOSPITAL_FLOWERBED_CLOSEUP_BACKGROUND)
+		return
 	if speaker.strip_edges() == "[화단]":
 		_set_episode_background_texture(HOSPITAL_GARDEN_BACKGROUND)
 	else:
@@ -2568,7 +2572,7 @@ func _on_dialogue_processed(
 	current_speaker_text = str(
 		dialogue_box.speaker_label.text
 	).strip_edges()
-	_update_hospital_dialogue_background(current_speaker_text)
+	_update_hospital_dialogue_background(current_speaker_text, str(_dialogue))
 
 
 	current_dialogue_text = str(
