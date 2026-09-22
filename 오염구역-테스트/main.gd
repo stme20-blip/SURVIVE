@@ -221,6 +221,11 @@ var mobile_discussion_separator: HSeparator
 
 var mobile_feed_scroll: ScrollContainer
 var mobile_feed_container: VBoxContainer
+var _feed_touch_index := -1
+var _feed_touch_start := Vector2.ZERO
+var _feed_touch_scroll := 0
+var _feed_touch_dragged := false
+var _mobile_feed_signature := ""
 
 var mobile_message_input: LineEdit
 var mobile_submit_button: Button
@@ -485,8 +490,35 @@ func _on_dialogue_box_gui_input(event: InputEvent) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if _handle_mobile_feed_touch(event):
+		return
 	# Receive clicks before UI controls consume them, matching DialogueBox's ESC path.
 	_try_skip_dialogue_with_click(event)
+
+
+func _handle_mobile_feed_touch(event: InputEvent) -> bool:
+	if not is_instance_valid(mobile_feed_scroll) or not mobile_feed_scroll.is_visible_in_tree():
+		return false
+	if event is InputEventScreenTouch:
+		if event.pressed and mobile_feed_scroll.get_global_rect().has_point(event.position) and not SettingsOverlay.is_pointer_over_interactive_control(event.position):
+			_feed_touch_index = event.index
+			_feed_touch_start = event.position
+			_feed_touch_scroll = mobile_feed_scroll.scroll_vertical
+			_feed_touch_dragged = false
+		elif not event.pressed and event.index == _feed_touch_index:
+			_feed_touch_index = -1
+			if _feed_touch_dragged:
+				get_viewport().set_input_as_handled()
+				return true
+	elif event is InputEventScreenDrag and event.index == _feed_touch_index:
+		var distance: float = event.position.y - _feed_touch_start.y
+		if absf(distance) > 8.0 or _feed_touch_dragged:
+			_feed_touch_dragged = true
+			var bar := mobile_feed_scroll.get_v_scroll_bar()
+			mobile_feed_scroll.scroll_vertical = int(clampf(_feed_touch_scroll - distance, 0.0, maxf(0.0, bar.max_value - bar.page)))
+			get_viewport().set_input_as_handled()
+			return true
+	return false
 
 
 func _try_skip_dialogue_with_click(event: InputEvent) -> void:
@@ -1219,11 +1251,11 @@ func _create_mobile_scroll() -> void:
 	mobile_scroll_arrow.focus_mode = Control.FOCUS_NONE
 	mobile_scroll_arrow.add_theme_font_size_override("font_size", 36)
 	var arrow_style := StyleBoxFlat.new()
-	arrow_style.bg_color = Color("#181b1f")
-	arrow_style.border_color = Color("#666a70")
-	arrow_style.set_border_width_all(1)
-	arrow_style.set_corner_radius_all(28)
-	mobile_scroll_arrow.add_theme_stylebox_override("normal", arrow_style)
+	arrow_style.bg_color = Color(0.09, 0.10, 0.12, 0.65)
+	arrow_style.set_border_width_all(0)
+	arrow_style.set_corner_radius_all(0)
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
+		mobile_scroll_arrow.add_theme_stylebox_override(state, arrow_style)
 	mobile_scroll_arrow.pressed.connect(_on_mobile_scroll_arrow_pressed)
 	mobile_scroll.get_v_scroll_bar().value_changed.connect(_update_mobile_scroll_arrow)
 	mobile_scroll.get_v_scroll_bar().changed.connect(_update_mobile_scroll_arrow)
@@ -1931,7 +1963,7 @@ func _setup_mobile_web_input_bridge() -> void:
 			title.textContent = '생존 기록';
 			cancel.textContent = '닫기';
 			submit.textContent = '등록';
-			field.placeholder = '대사 또는 기록 입력 · 수정버전9';
+			field.placeholder = '대사 또는 기록 입력 · 수정버전10';
 			Object.assign(title.style, { display: 'block', fontSize: '20px', lineHeight: '1.3' });
 			Object.assign(composer.style, {
 				position: 'fixed', display: 'none', zIndex: '2147483647',
@@ -3703,6 +3735,13 @@ func _refresh_mobile_feed() -> void:
 
 	if mobile_feed_container == null:
 		return
+	var signature := str(RoomManager.get_feed()) + mobile_editing_comment_id + str(RoomManager.has_room())
+	if signature == _mobile_feed_signature:
+		return
+	var old_scroll := mobile_feed_scroll.scroll_vertical
+	var old_bar := mobile_feed_scroll.get_v_scroll_bar()
+	var follow_latest := _mobile_feed_signature.is_empty() or old_scroll >= old_bar.max_value - old_bar.page - 8.0
+	_mobile_feed_signature = signature
 
 
 	for child in (
@@ -3772,11 +3811,13 @@ func _refresh_mobile_feed() -> void:
 		)
 
 
-	if mobile_editing_comment_id.is_empty():
+	if mobile_editing_comment_id.is_empty() and follow_latest:
 
 		call_deferred(
 			"_scroll_mobile_feed_to_bottom"
 		)
+	else:
+		mobile_feed_scroll.set_deferred("scroll_vertical", old_scroll)
 
 
 func _scroll_mobile_feed_to_bottom() -> void:
