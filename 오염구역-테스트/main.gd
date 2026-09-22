@@ -1963,7 +1963,7 @@ func _setup_mobile_web_input_bridge() -> void:
 			title.textContent = '생존 기록';
 			cancel.textContent = '닫기';
 			submit.textContent = '등록';
-			field.placeholder = '대사 또는 기록 입력 · 수정버전10';
+			field.placeholder = '대사 또는 기록 입력 · 수정버전11';
 			Object.assign(title.style, { display: 'block', fontSize: '20px', lineHeight: '1.3' });
 			Object.assign(composer.style, {
 				position: 'fixed', display: 'none', zIndex: '2147483647',
@@ -2943,7 +2943,7 @@ func _update_mobile_scroll_content(viewport_size: Vector2) -> void:
 	mobile_content.custom_minimum_size = Vector2(viewport_size.x, content_height)
 	mobile_content.size = Vector2(viewport_size.x, content_height)
 	mobile_page_background.size = Vector2(viewport_size.x, content_height)
-	mobile_scroll_arrow.position = Vector2(viewport_size.x - 76.0, viewport_size.y - 76.0)
+	mobile_scroll_arrow.position = Vector2((viewport_size.x - 56.0) * 0.5, viewport_size.y - 76.0)
 	mobile_scroll_arrow.size = Vector2(56.0, 56.0)
 	call_deferred("_update_mobile_scroll_arrow")
 
