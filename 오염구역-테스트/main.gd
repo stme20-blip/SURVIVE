@@ -1987,6 +1987,19 @@ func _close_mobile_web_input() -> void:
 	_mobile_web_active_input = null
 
 
+func _sync_mobile_web_input_now() -> void:
+
+	# The submit tap can arrive before a WebView dispatches its final `input`
+	# callback. Read the browser field first, then close it.
+	if _mobile_web_input_bridge == null or not is_instance_valid(_mobile_web_active_input):
+		return
+
+	var web_text: Variant = _mobile_web_input_bridge.read()
+	if web_text is String:
+		_mobile_web_active_input.text = web_text
+		_mobile_web_active_input.caret_column = _mobile_web_active_input.text.length()
+
+
 # =========================================================
 # 모바일 UI 표시/숨김
 # =========================================================
@@ -3377,6 +3390,7 @@ func _on_mobile_message_submitted(
 	_text: String
 ) -> void:
 
+	_sync_mobile_web_input_now()
 	_close_mobile_web_input()
 	mobile_message_input.apply_ime()
 
@@ -3392,6 +3406,7 @@ func _on_mobile_message_submitted(
 
 func _on_mobile_submit_pressed() -> void:
 
+	_sync_mobile_web_input_now()
 	_close_mobile_web_input()
 	mobile_message_input.apply_ime()
 
