@@ -1877,7 +1877,8 @@ func _setup_mobile_web_input_bridge() -> void:
 			title.textContent = '생존 기록';
 			cancel.textContent = '닫기';
 			submit.textContent = '등록';
-			field.placeholder = '대사 또는 기록 입력 · 수정버전5';
+			field.placeholder = '대사 또는 기록 입력 · 수정버전6';
+			Object.assign(title.style, { display: 'block', fontSize: '20px', lineHeight: '1.3' });
 			Object.assign(composer.style, {
 				position: 'fixed', display: 'none', zIndex: '2147483647',
 				background: 'rgba(0, 0, 0, 0.72)', boxSizing: 'border-box',
@@ -1892,15 +1893,15 @@ func _setup_mobile_web_input_bridge() -> void:
 			Object.assign(field.style, {
 				display: 'block', width: '100%', minHeight: '76px', resize: 'none',
 				boxSizing: 'border-box', margin: '10px 0 12px', padding: '10px',
-				fontSize: '16px', lineHeight: '1.4', color: '#f3f3f3', caretColor: '#fff',
+				fontSize: '18px', lineHeight: '1.4', color: '#f3f3f3', caretColor: '#fff',
 				background: '#0d0e10', border: '2px solid #000', borderRadius: '7px', outline: 'none'
 			});
 			Object.assign(actions.style, { display: 'flex', gap: '8px', justifyContent: 'flex-end' });
 			const placeholderStyle = document.createElement('style');
 			placeholderStyle.textContent = '#survive-mobile-comment-input::placeholder { color: #8d9199; opacity: 1; }';
 			document.head.appendChild(placeholderStyle);
-			Object.assign(cancel.style, { minWidth: '88px', height: '40px', color: '#eee', background: '#292b30', border: '0', borderRadius: '6px', fontSize: '15px' });
-			Object.assign(submit.style, { minWidth: '76px', height: '40px', color: '#111', background: '#f1f1f1', border: '0', borderRadius: '6px', fontSize: '15px', fontWeight: '700' });
+			Object.assign(cancel.style, { minWidth: '96px', height: '44px', color: '#eee', background: '#292b30', border: '0', borderRadius: '6px', fontSize: '17px' });
+			Object.assign(submit.style, { minWidth: '82px', height: '44px', color: '#111', background: '#f1f1f1', border: '0', borderRadius: '6px', fontSize: '17px', fontWeight: '700' });
 			document.body.appendChild(composer);
 			composer.appendChild(card);
 			card.appendChild(title);
