@@ -233,6 +233,7 @@ var _mobile_web_viewport_callback: JavaScriptObject
 var _mobile_web_submit_callback: JavaScriptObject
 var _mobile_web_cancel_callback: JavaScriptObject
 var _mobile_web_active_input: LineEdit
+var _mobile_web_edit_comment_id := ""
 var _mobile_keyboard_height_px := 0.0
 var _mobile_keyboard_canvas_ratio := 0.0
 var _mobile_comment_composer_mode := false
@@ -1876,7 +1877,7 @@ func _setup_mobile_web_input_bridge() -> void:
 			title.textContent = '생존 기록';
 			cancel.textContent = '닫기';
 			submit.textContent = '등록';
-			field.placeholder = '대사 또는 기록 입력 · 수정버전1';
+			field.placeholder = '대사 또는 기록 입력 · 수정버전2';
 			Object.assign(composer.style, {
 				position: 'fixed', display: 'none', zIndex: '2147483647',
 				background: 'rgba(0, 0, 0, 0.72)', boxSizing: 'border-box',
@@ -1990,6 +1991,7 @@ func _open_mobile_web_input(input: LineEdit) -> void:
 	_mobile_comment_composer_mode = false
 	SettingsOverlay.set_mobile_comment_composer_mode(true)
 	_mobile_web_active_input = input
+	_mobile_web_edit_comment_id = str(input.get_meta("mobile_comment_id")) if input.has_meta("mobile_comment_id") else ""
 	_mobile_web_input_bridge.open(input.text)
 
 
@@ -2076,6 +2078,7 @@ func _finish_mobile_comment_composer() -> void:
 	_mobile_comment_composer_mode = false
 	_mobile_keyboard_height_px = 0.0
 	_mobile_keyboard_canvas_ratio = 0.0
+	_mobile_web_edit_comment_id = ""
 	SettingsOverlay.set_mobile_comment_composer_mode(false)
 	_close_mobile_web_input()
 	_apply_current_layout()
@@ -2083,11 +2086,11 @@ func _finish_mobile_comment_composer() -> void:
 
 func _on_mobile_web_composer_submitted(args: Array) -> void:
 
+	var edit_comment_id := _mobile_web_edit_comment_id
+	var submitted_text := str(args[0]) if not args.is_empty() else ""
 	_on_mobile_web_input_changed(args)
-	var edit_comment_id := ""
-	if is_instance_valid(_mobile_web_active_input) and _mobile_web_active_input.has_meta("mobile_comment_id"):
-		edit_comment_id = str(_mobile_web_active_input.get_meta("mobile_comment_id"))
-	var submitted_text := _mobile_web_active_input.text if is_instance_valid(_mobile_web_active_input) else ""
+	if submitted_text.is_empty() and is_instance_valid(_mobile_web_active_input):
+		submitted_text = _mobile_web_active_input.text
 	_finish_mobile_comment_composer()
 	if edit_comment_id.is_empty():
 		call_deferred("_submit_mobile_comment_after_ime")
