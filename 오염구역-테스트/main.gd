@@ -1876,7 +1876,7 @@ func _setup_mobile_web_input_bridge() -> void:
 			title.textContent = '생존 기록';
 			cancel.textContent = '닫기';
 			submit.textContent = '등록';
-			field.placeholder = '대사 또는 기록 입력';
+			field.placeholder = '대사 또는 기록 입력 · 수정버전1';
 			Object.assign(composer.style, {
 				position: 'fixed', display: 'none', zIndex: '2147483647',
 				background: 'rgba(0, 0, 0, 0.72)', boxSizing: 'border-box',
