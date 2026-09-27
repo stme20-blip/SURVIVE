@@ -12,9 +12,29 @@ extends Control
 	get_node_or_null("DiscussionPanel")
 )
 
-const HOSPITAL_EXTERIOR_BACKGROUND := preload("res://hospital_exterior.png")
-const HOSPITAL_GARDEN_BACKGROUND := preload("res://hospital_garden.png")
-const HOSPITAL_FLOWERBED_CLOSEUP_BACKGROUND := preload("res://hospital_flowerbed_closeup.png")
+const HOSPITAL_EXTERIOR_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_exterior.png")
+const HOSPITAL_GARDEN_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_garden.png")
+const HOSPITAL_FLOWERBED_CLOSEUP_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_flowerbed_closeup.png")
+const HOSPITAL_BURIED_NOTEBOOK_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_buried_notebook.png")
+const HOSPITAL_NOTEBOOK_WARNING_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_notebook_warning.png")
+const HOSPITAL_HANDS_EMERGE_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_hands_emerge.png")
+const HOSPITAL_HANDS_ATTACK_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_hands_attack.png")
+const HOSPITAL_FLOWERBED_AFTER_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_flowerbed_after.png")
+const HOSPITAL_LOBBY_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_lobby.png")
+const HOSPITAL_RECEPTION_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_reception.png")
+const HOSPITAL_QUEUE_TICKET_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_queue_ticket.png")
+const HOSPITAL_MONSTER_ATTACK_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_monster_attack.png")
+const HOSPITAL_TICKET_HELD_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_ticket_held.png")
+const HOSPITAL_WAITING_ROOM_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_waiting_room.png")
+const HOSPITAL_CORRIDOR_STAFF_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_corridor_staff.png")
+const HOSPITAL_TICKET_NUMBER_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_ticket_number.png")
+const HOSPITAL_VENDING_ROOM_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_vending_room.png")
+const HOSPITAL_VENDING_HAND_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_vending_hand.png")
+const HOSPITAL_MARKET_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_market.png")
+const HOSPITAL_MARKET_CHILD_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_market_child.png")
+const HOSPITAL_MARKET_CHILD_CLOSE_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_market_child_close.png")
+const HOSPITAL_MARKET_CHILD_SCREAM_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_market_child_scream.png")
+const HOSPITAL_DIALOGUE_31_BACKGROUND := preload("res://assets/episodes/hospital/backgrounds/hospital_dialogue_31.png")
 
 
 # =========================================================
@@ -165,6 +185,96 @@ func _set_episode_background_texture(texture: Texture2D) -> void:
 func _update_hospital_dialogue_background(speaker: String, dialogue: String) -> void:
 	if RoomManager.get_dialogue_file().strip_edges() != "res://hospital_dialogue.tres":
 		return
+	var dialogue_31_node: Dictionary = dialogue_box.data.nodes.get(&"1_31", {})
+	if not dialogue_31_node.is_empty() and dialogue.strip_edges() == str(dialogue_31_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_DIALOGUE_31_BACKGROUND)
+		return
+	var monster_node: Dictionary = dialogue_box.data.nodes.get(&"1_18", {})
+	if not monster_node.is_empty() and dialogue.strip_edges() == str(monster_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_MONSTER_ATTACK_BACKGROUND)
+		return
+	var ticket_held_node: Dictionary = dialogue_box.data.nodes.get(&"1_16", {})
+	if not ticket_held_node.is_empty() and dialogue.strip_edges() == str(ticket_held_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_TICKET_HELD_BACKGROUND)
+		return
+	var waiting_room_node: Dictionary = dialogue_box.data.nodes.get(&"1_17", {})
+	if not waiting_room_node.is_empty() and dialogue.strip_edges() == str(waiting_room_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_WAITING_ROOM_BACKGROUND)
+		return
+	var corridor_staff_node: Dictionary = dialogue_box.data.nodes.get(&"1_19", {})
+	if not corridor_staff_node.is_empty() and dialogue.strip_edges() == str(corridor_staff_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_CORRIDOR_STAFF_BACKGROUND)
+		return
+	var ticket_number_node: Dictionary = dialogue_box.data.nodes.get(&"1_20", {})
+	if not ticket_number_node.is_empty() and dialogue.strip_edges() == str(ticket_number_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_TICKET_NUMBER_BACKGROUND)
+		return
+	var reception_followup_node: Dictionary = dialogue_box.data.nodes.get(&"1_21", {})
+	if not reception_followup_node.is_empty() and dialogue.strip_edges() == str(reception_followup_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_RECEPTION_BACKGROUND)
+		return
+	var vending_room_node: Dictionary = dialogue_box.data.nodes.get(&"1_22", {})
+	if not vending_room_node.is_empty() and dialogue.strip_edges() == str(vending_room_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_VENDING_ROOM_BACKGROUND)
+		return
+	var vending_hand_node: Dictionary = dialogue_box.data.nodes.get(&"1_23", {})
+	if not vending_hand_node.is_empty() and dialogue.strip_edges() == str(vending_hand_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_VENDING_HAND_BACKGROUND)
+		return
+	var market_node: Dictionary = dialogue_box.data.nodes.get(&"1_24", {})
+	if not market_node.is_empty() and dialogue.strip_edges() == str(market_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_MARKET_BACKGROUND)
+		return
+	var market_child_node: Dictionary = dialogue_box.data.nodes.get(&"1_25", {})
+	if not market_child_node.is_empty() and dialogue.strip_edges() == str(market_child_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_MARKET_CHILD_BACKGROUND)
+		return
+	var market_child_close_node: Dictionary = dialogue_box.data.nodes.get(&"1_26", {})
+	if not market_child_close_node.is_empty() and dialogue.strip_edges() == str(market_child_close_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_MARKET_CHILD_CLOSE_BACKGROUND)
+		return
+	var market_child_scream_node: Dictionary = dialogue_box.data.nodes.get(&"1_27", {})
+	if not market_child_scream_node.is_empty() and dialogue.strip_edges() == str(market_child_scream_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_MARKET_CHILD_SCREAM_BACKGROUND)
+		return
+	var reception_28_node: Dictionary = dialogue_box.data.nodes.get(&"1_28", {})
+	if not reception_28_node.is_empty() and dialogue.strip_edges() == str(reception_28_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_RECEPTION_BACKGROUND)
+		return
+	var reception_node: Dictionary = dialogue_box.data.nodes.get(&"1_14", {})
+	if not reception_node.is_empty() and dialogue.strip_edges() == str(reception_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_RECEPTION_BACKGROUND)
+		return
+	var queue_node: Dictionary = dialogue_box.data.nodes.get(&"1_15", {})
+	if not queue_node.is_empty() and dialogue.strip_edges() == str(queue_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_QUEUE_TICKET_BACKGROUND)
+		return
+	var lobby_node: Dictionary = dialogue_box.data.nodes.get(&"1_12", {})
+	if not lobby_node.is_empty() and dialogue.strip_edges() == str(lobby_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_LOBBY_BACKGROUND)
+		return
+	var flowerbed_after_node: Dictionary = dialogue_box.data.nodes.get(&"1_13", {})
+	if not flowerbed_after_node.is_empty() and dialogue.strip_edges() == str(flowerbed_after_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_FLOWERBED_AFTER_BACKGROUND)
+		return
+	# Dialogue 10 continues the attack and needs its own close-up background.
+	var hands_attack_node: Dictionary = dialogue_box.data.nodes.get(&"1_10", {})
+	if not hands_attack_node.is_empty() and dialogue.strip_edges() == str(hands_attack_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_HANDS_ATTACK_BACKGROUND)
+		return
+	# Resolve Dialogue 9 from the resource so prose edits keep its background.
+	var hands_node: Dictionary = dialogue_box.data.nodes.get(&"1_9", {})
+	if not hands_node.is_empty() and dialogue.strip_edges() == str(hands_node.get("dialogue", "")).strip_edges():
+		_set_episode_background_texture(HOSPITAL_HANDS_EMERGE_BACKGROUND)
+		return
+	# Dialogue 8 uses "마시오" in the graph. The speaker check also keeps this
+	# background tied to the note if that wording is adjusted later.
+	if speaker.strip_edges() == "[수상한 노트]" or dialogue.strip_edges().begins_with("절대 다음 장을 넘기지 마시오"):
+		_set_episode_background_texture(HOSPITAL_NOTEBOOK_WARNING_BACKGROUND)
+		return
+	if dialogue.strip_edges().begins_with("흙더미를 파헤치자, 묻혀 있는 낡은 노트를 발견했습니다"):
+		_set_episode_background_texture(HOSPITAL_BURIED_NOTEBOOK_BACKGROUND)
+		return
 	# Dialogue 6 is the close inspection of the flowerbed. Keep its dedicated
 	# close-up separate from Dialogue 5's wider flowerbed-arrival background.
 	if dialogue.strip_edges().begins_with("잡초와 시든 꽃이 가득한 화단"):
@@ -190,6 +300,13 @@ var name_label: Label
 # =========================================================
 # PC Insight
 # =========================================================
+
+var trait_hint_button: Button
+var mobile_trait_hint_button: Button
+var trait_hint_popup: CanvasLayer
+var inventory_popup: CanvasLayer
+var bag_button: Button
+var mobile_bag_button: Button
 
 var insight_panel: Panel
 var insight_label: Label
@@ -244,6 +361,9 @@ var _feed_touch_start := Vector2.ZERO
 var _feed_touch_scroll := 0
 var _feed_touch_dragged := false
 var _mobile_feed_signature := ""
+var _mobile_feed_entry_ids: Dictionary = {}
+const MOBILE_FEED_MIN_HEIGHT := 260.0
+const MOBILE_TEXT_FONT_SIZE := 26
 
 var mobile_message_input: LineEdit
 var mobile_submit_button: Button
@@ -353,8 +473,8 @@ const MOBILE_GAP := 10.0
 
 const MOBILE_INSIGHT_HEIGHT := 62.0
 
-const MOBILE_PORTRAIT_WIDTH := 92.0
-const MOBILE_PORTRAIT_HEIGHT := 92.0
+const MOBILE_PORTRAIT_WIDTH := 112.0
+const MOBILE_PORTRAIT_HEIGHT := 112.0
 
 # 모바일 대사 행의 최소 높이.
 # 실제 대사가 길면 이 값보다 자동으로 커진다.
@@ -460,6 +580,10 @@ func _ready() -> void:
 	dialogue_box.option_selected.connect(
 		_on_dialogue_option_selected
 	)
+	add_child(preload("res://ChoiceSync.gd").new())
+	var potion_sync := preload("res://PotionSync.gd").new()
+	potion_sync.name = "PotionSync"
+	add_child(potion_sync)
 	dialogue_box.gui_input.connect(_on_dialogue_box_gui_input)
 
 	_connect_first_dialogue_wait_debug()
@@ -508,6 +632,10 @@ func _on_dialogue_box_gui_input(event: InputEvent) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if inventory_popup != null and inventory_popup.is_open():
+		return
+	if trait_hint_popup != null and trait_hint_popup.is_open():
+		return
 	if _handle_mobile_feed_touch(event):
 		return
 	# Receive clicks before UI controls consume them, matching DialogueBox's ESC path.
@@ -540,6 +668,14 @@ func _handle_mobile_feed_touch(event: InputEvent) -> bool:
 
 
 func _try_skip_dialogue_with_click(event: InputEvent) -> void:
+	if inventory_popup != null and inventory_popup.is_open():
+		return
+	if trait_hint_popup != null and trait_hint_popup.is_open():
+		return
+	if event is InputEventMouseButton:
+		for button in [trait_hint_button, mobile_trait_hint_button, bag_button, mobile_bag_button]:
+			if is_instance_valid(button) and button.is_visible_in_tree() and button.get_global_rect().has_point(event.position):
+				return
 	if not event is InputEventMouseButton:
 		return
 	if event.button_index != MOUSE_BUTTON_LEFT or not event.pressed:
@@ -665,6 +801,9 @@ func _sync_root_size() -> void:
 # =========================================================
 
 func _apply_current_layout() -> void:
+
+	if trait_hint_button == null:
+		_create_trait_hint_controls()
 
 	if ScreenLayout.is_mobile_portrait():
 
@@ -1685,7 +1824,7 @@ func _create_mobile_dialogue() -> void:
 
 	mobile_dialogue_label.add_theme_font_size_override(
 		"normal_font_size",
-		26
+		MOBILE_TEXT_FONT_SIZE
 	)
 
 
@@ -1893,7 +2032,7 @@ func _create_mobile_discussion() -> void:
 
 	mobile_message_input.add_theme_font_size_override(
 		"font_size",
-		23
+		MOBILE_TEXT_FONT_SIZE
 	)
 
 
@@ -2320,36 +2459,8 @@ func _make_mobile_choice_style(
 # Dialogue Signal
 # =========================================================
 
-func _normalize_personality_key(
-	value: String
-) -> String:
-
-	var key: String = (
-		value
-			.strip_edges()
-			.to_upper()
-	)
-
-
-	match key:
-
-		"차분함", "차분":
-			return "CALM"
-
-		"신중함", "신중":
-			return "CAUTIOUS"
-
-		"호기심":
-			return "CURIOUS"
-
-		"직선적", "직선":
-			return "DIRECT"
-
-		"겁이 많음", "겁이많음", "겁많음":
-			return "TIMID"
-
-
-	return key
+func _normalize_personality_key(value: String) -> String:
+	return GameData.normalize_personality_key(value)
 
 
 func _get_selected_personality_key() -> String:
@@ -2411,17 +2522,15 @@ func _on_dialogue_signal(
 	# 특성 전용 Insight만 처리
 	#
 	# 형식:
-	# INSIGHT|특성KEY|분류|내용
+	# IN|특성코드(S/Y/N/H/G)|분류|내용
 	#
 	# 예:
-	# INSIGHT|CAUTIOUS|관찰|손잡이만 유난히 깨끗하다.
+	# IN|S|관찰|손잡이만 유난히 깨끗하다.
 	#
 	# 캐릭터 ID는 전혀 사용하지 않는다.
 	# =====================================================
 
-	if not clean_value.begins_with(
-		"INSIGHT|"
-	):
+	if not (clean_value.begins_with("IN|") or clean_value.begins_with("INSIGHT|")):
 
 		return
 
@@ -2524,6 +2633,7 @@ func _on_dialogue_processed(
 	options
 ) -> void:
 	_dialogue_revision += 1
+	_acquire_dialogue_item(str(_dialogue))
 	if _settings_refresh_pending:
 		_refresh_character_settings()
 
@@ -2615,6 +2725,8 @@ func _on_dialogue_processed(
 
 	active_insight_title = ""
 	active_insight_text = ""
+	if trait_hint_popup != null:
+		trait_hint_popup.close()
 
 
 	_consume_pending_insight()
@@ -2755,6 +2867,8 @@ func _consume_pending_insight() -> void:
 # =========================================================
 
 func _apply_mobile_layout() -> void:
+	bag_button.hide()
+	trait_hint_button.hide()
 
 	_sync_root_size()
 
@@ -2877,41 +2991,10 @@ func _apply_mobile_layout() -> void:
 	# 판단 / 관찰
 	# =====================================================
 
-	if not active_insight_text.is_empty():
-
-		mobile_insight_panel.visible = true
-
-
-		mobile_insight_panel.position = Vector2(
-			MOBILE_MARGIN,
-			current_y
-		)
-
-
-		mobile_insight_panel.size = Vector2(
-			viewport_size.x
-				- MOBILE_MARGIN * 2,
-			MOBILE_INSIGHT_HEIGHT
-		)
-
-
-		mobile_insight_label.text = (
-			"["
-			+ active_insight_title
-			+ "]  "
-			+ active_insight_text
-		)
-
-
-		current_y += (
-			MOBILE_INSIGHT_HEIGHT
-			+ MOBILE_GAP
-		)
-
-	else:
-
-		mobile_insight_panel.visible = false
-
+	mobile_insight_panel.hide()
+	trait_hint_button.hide()
+	bag_button.hide()
+	mobile_trait_hint_button.disabled = active_insight_text.is_empty()
 
 	# =====================================================
 	# 대사 + 선택지
@@ -2998,8 +3081,16 @@ func _layout_mobile_dialogue(
 	# 대사 행
 	# =====================================================
 
+	mobile_trait_hint_button.visible = true
+	mobile_trait_hint_button.disabled = active_insight_text.is_empty()
+	mobile_trait_hint_button.position = Vector2(MOBILE_MARGIN + 46, MOBILE_MARGIN + (MOBILE_PORTRAIT_HEIGHT + 8 if current_has_choice else 0))
+	mobile_trait_hint_button.add_theme_font_size_override("font_size", mobile_dialogue_label.get_theme_font_size("normal_font_size"))
+	mobile_trait_hint_button.size = Vector2(MOBILE_PORTRAIT_WIDTH - 46, 40)
+	mobile_bag_button.position = Vector2(MOBILE_MARGIN, mobile_trait_hint_button.position.y)
+	mobile_bag_button.size = Vector2(40, 40)
+
 	var text_left: float = (
-		MOBILE_MARGIN
+		MOBILE_MARGIN + MOBILE_PORTRAIT_WIDTH + 12
 	)
 
 
@@ -3108,7 +3199,7 @@ func _layout_mobile_dialogue(
 
 		mobile_dialogue_row_height = max(
 			mobile_dialogue_row_height,
-			MOBILE_PORTRAIT_HEIGHT
+			MOBILE_PORTRAIT_HEIGHT + 48.0
 		)
 
 
@@ -3512,7 +3603,7 @@ func _layout_mobile_discussion(
 
 	panel_height = max(
 		panel_height,
-		300.0
+		MOBILE_FEED_MIN_HEIGHT + 184.0
 	)
 
 
@@ -3613,7 +3704,7 @@ func _layout_mobile_discussion(
 		w - 32,
 		max(
 			h - 184,
-			100.0
+			MOBILE_FEED_MIN_HEIGHT
 		)
 	)
 
@@ -3760,6 +3851,15 @@ func _refresh_mobile_feed() -> void:
 	var old_scroll := mobile_feed_scroll.scroll_vertical
 	var old_bar := mobile_feed_scroll.get_v_scroll_bar()
 	var follow_latest := _mobile_feed_signature.is_empty() or old_scroll >= old_bar.max_value - old_bar.page - 8.0
+	var entry_ids: Dictionary = {}
+	var has_new_entry := false
+	for entry in RoomManager.get_feed():
+		var entry_id := str(entry.get("comment_id", ""))
+		if not entry_id.is_empty():
+			entry_ids[entry_id] = true
+			if not _mobile_feed_entry_ids.has(entry_id):
+				has_new_entry = true
+	_mobile_feed_entry_ids = entry_ids
 	_mobile_feed_signature = signature
 
 
@@ -3830,7 +3930,7 @@ func _refresh_mobile_feed() -> void:
 		)
 
 
-	if mobile_editing_comment_id.is_empty() and follow_latest:
+	if has_new_entry or (mobile_editing_comment_id.is_empty() and follow_latest):
 
 		call_deferred(
 			"_scroll_mobile_feed_to_bottom"
@@ -3878,7 +3978,7 @@ func _add_mobile_scene_header(
 
 	label.add_theme_font_size_override(
 		"font_size",
-		22
+		MOBILE_TEXT_FONT_SIZE
 	)
 
 
@@ -3897,6 +3997,17 @@ func _add_mobile_scene_header(
 func _add_mobile_comment(
 	entry: Dictionary
 ) -> void:
+	if bool(entry.get("system_message", false)):
+		if str(entry.get("event_kind", "")) in ["item", "potion"]:
+			_add_mobile_item_notice(RoomManager.get_notice_color(entry), str(entry.get("event_kind", "")), str(entry.get("text", "")))
+			return
+		var notice := Label.new()
+		notice.text = str(entry.get("text", ""))
+		notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		notice.add_theme_font_size_override("font_size", MOBILE_TEXT_FONT_SIZE)
+		notice.add_theme_color_override("font_color", RoomManager.get_notice_color(entry))
+		mobile_feed_container.add_child(notice)
+		return
 
 	var comment_id: String = str(
 		entry.get(
@@ -3930,7 +4041,7 @@ func _add_mobile_comment(
 	header.add_child(speaker_label)
 	speaker_label.text = speaker
 	speaker_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	speaker_label.add_theme_font_size_override("font_size", 20)
+	speaker_label.add_theme_font_size_override("font_size", MOBILE_TEXT_FONT_SIZE)
 	speaker_label.modulate = Color(0.78, 0.81, 0.84, 1.0)
 
 	if (
@@ -3966,7 +4077,7 @@ func _add_mobile_comment(
 		edit_input.set_meta("mobile_comment_id", comment_id)
 		edit_input.custom_minimum_size = Vector2(0, 48)
 		edit_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		edit_input.add_theme_font_size_override("font_size", 23)
+		edit_input.add_theme_font_size_override("font_size", MOBILE_TEXT_FONT_SIZE)
 		edit_input.expand_to_text_length = false
 		var edit_style := StyleBoxFlat.new()
 		edit_style.bg_color = Color("#121212")
@@ -4008,12 +4119,31 @@ func _add_mobile_comment(
 	message_label.text = text
 	message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	message_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	message_label.add_theme_font_size_override("font_size", 24)
+	message_label.add_theme_font_size_override("font_size", MOBILE_TEXT_FONT_SIZE)
 
 
 # =========================================================
 # 모바일 댓글 수정
 # =========================================================
+
+func _add_mobile_item_notice(color: Color, event_kind: String, notice_text: String) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 0)
+	mobile_feed_container.add_child(row)
+	var item_name := "일기장"
+	var parts: Array = ["가방 안에 ", item_name, "을 넣었습니다."]
+	if event_kind == "potion":
+		var marker := " 님이 가방의 탈출 물약을 복용했습니다."
+		item_name = "탈출 물약"
+		parts = [notice_text.trim_suffix(marker) + " 님이 가방의 ", item_name, "을 복용했습니다."] if notice_text.ends_with(marker) else [notice_text]
+	for part in parts:
+		var label := Label.new()
+		label.text = part
+		label.add_theme_font_size_override("font_size", MOBILE_TEXT_FONT_SIZE)
+		label.add_theme_color_override("font_color", color)
+		if part == item_name:
+			label.add_theme_color_override("font_color", Color("#7f9fba"))
+		row.add_child(label)
 
 func _on_mobile_edit_pressed(
 	comment_id: String
@@ -4085,16 +4215,11 @@ func _on_mobile_delete_pressed(comment_id: String) -> void:
 	dialog.dialog_text = "기록을 삭제하시겠습니까?\n복구할 수 없습니다."
 	dialog.ok_button_text = "삭제"
 	dialog.cancel_button_text = "취소"
-	dialog.min_size = Vector2(440, 210)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("#202225")
-	style.border_color = Color(1, 1, 1, 0.32)
-	style.set_border_width_all(1)
-	style.set_content_margin_all(24)
-	dialog.add_theme_stylebox_override("panel", style)
-	dialog.add_theme_font_size_override("title_font_size", 26)
 	add_child(dialog)
+	preload("res://AlertStyle.gd").apply(dialog)
 	dialog.confirmed.connect(func(): CommentSync.delete_comment(comment_id))
+	dialog.canceled.connect(dialog.queue_free)
+	dialog.confirmed.connect(dialog.queue_free)
 	dialog.popup_centered()
 
 
@@ -4141,7 +4266,7 @@ func _add_mobile_empty_message(
 
 	label.add_theme_font_size_override(
 		"font_size",
-		22
+		MOBILE_TEXT_FONT_SIZE
 	)
 
 
@@ -4518,50 +4643,16 @@ func _apply_desktop_layout() -> void:
 	# 대화창이 위로 늘어나면 Insight도 같이 위로 이동.
 	# =====================================================
 
-	if active_insight_text.is_empty():
-
-		insight_panel.visible = false
-
-	else:
-
-		insight_panel.visible = true
-
-
-		insight_label.text = (
-			"["
-			+ active_insight_title
-			+ "]  "
-			+ active_insight_text
-		)
-
-
-		var insight_x: float = (
-			CHOICE_INSIGHT_POSITION.x
-			if current_has_choice
-			else NORMAL_INSIGHT_POSITION.x
-		)
-
-
-		var insight_width: float = (
-			CHOICE_INSIGHT_SIZE.x
-			if current_has_choice
-			else NORMAL_INSIGHT_SIZE.x
-		)
-
-
-		insight_panel.position = Vector2(
-			insight_x,
-			dialogue_y
-				- CHOICE_INSIGHT_SIZE.y
-				- DESKTOP_INSIGHT_GAP
-		)
-
-
-		insight_panel.size = Vector2(
-			insight_width,
-			CHOICE_INSIGHT_SIZE.y
-		)
-
+	insight_panel.hide()
+	trait_hint_button.show()
+	trait_hint_button.disabled = active_insight_text.is_empty()
+	trait_hint_button.add_theme_font_size_override("font_size", dialogue_box.dialogue_label.get_theme_font_size("normal_font_size"))
+	var hint_size := trait_hint_button.get_combined_minimum_size().max(Vector2(80, 28))
+	trait_hint_button.position = Vector2(dialogue_x + dialogue_width - hint_size.x, dialogue_y - hint_size.y - 6.0)
+	trait_hint_button.size = hint_size
+	bag_button.show()
+	bag_button.size = Vector2(hint_size.y, hint_size.y)
+	bag_button.position = trait_hint_button.position - Vector2(hint_size.y + 6, 0)
 
 	# =====================================================
 	# 초상화
@@ -4799,6 +4890,8 @@ func _on_dialogue_option_selected(
 		)
 
 
+	snapshot["choice_base"] = get_node("ChoiceSync").base_round_key()
+	snapshot["choice_round"] = get_node("ChoiceSync")._round_key()
 	RoomManager.record_dialogue_selection(
 		idx,
 		option_text,
@@ -4817,7 +4910,35 @@ func _on_dialogue_option_selected(
 # 이전 선택으로 돌아가기
 # =========================================================
 
-func _on_undo_dialogue_pressed() -> void:
+func _apply_party_potion(data: Dictionary) -> void:
+	var target: Dictionary = data.get("target", {})
+	var history: Array = target.get("history", [])
+	if history.is_empty():
+		return
+	is_undoing_dialogue = true
+	inventory_popup.close()
+	var state := RoomManager.get_game_state()
+	state["dialogue_history"] = history.duplicate(true)
+	state["dialogue_file"] = str(target.get("file", ""))
+	if state["dialogue_file"].is_empty():
+		state["dialogue_file"] = "res://school_test.tres"
+	state["dialogue_start_id"] = str(target.get("start", "START1"))
+	RoomManager.current_room["game_state"] = state
+	RoomManager.undo_last_dialogue_selection()
+	RoomManager.update_potion_state(data)
+	get_node("ChoiceSync").reset_after_potion()
+	pending_choice_snapshot = {}
+	pending_insight_title = ""
+	pending_insight_text = ""
+	_load_episode_dialogue_data()
+	await _replay_dialogue_to_current_history()
+	is_undoing_dialogue = false
+	_apply_current_layout()
+
+func _on_undo_dialogue_pressed(using_potion: bool = false) -> void:
+	var potion := get_node_or_null("PotionSync")
+	if not using_potion and potion != null and potion.blocks_choices():
+		return
 
 	if is_restoring_dialogue:
 		return
@@ -4835,7 +4956,14 @@ func _on_undo_dialogue_pressed() -> void:
 		return
 
 
+	if using_potion and not RoomManager.consume_local_potion():
+		return
 	is_undoing_dialogue = true
+	if using_potion:
+		get_node("ChoiceSync").reset_after_potion()
+		inventory_popup.close()
+	elif RoomManager.has_active_online_room():
+		get_node("ChoiceSync").begin_review()
 
 
 	# 먼저 저장 기록을 실제 선택 직전으로 롤백
@@ -4857,6 +4985,8 @@ func _on_undo_dialogue_pressed() -> void:
 
 	active_insight_title = ""
 	active_insight_text = ""
+	if trait_hint_popup != null:
+		trait_hint_popup.close()
 
 
 	# 저장된 history를 다시 재생해
@@ -5036,3 +5166,63 @@ func _start_or_restore_dialogue() -> void:
 
 
 	_apply_current_layout()
+
+func _create_trait_hint_controls() -> void:
+	inventory_popup = preload("res://InventoryPopup.gd").new()
+	add_child(inventory_popup)
+	bag_button = _make_bag_button()
+	add_child(bag_button)
+	mobile_bag_button = _make_bag_button()
+	mobile_dialogue_panel.add_child(mobile_bag_button)
+	trait_hint_popup = preload("res://TraitHintPopup.gd").new()
+	add_child(trait_hint_popup)
+	trait_hint_button = _make_trait_hint_button("특성 힌트")
+	add_child(trait_hint_button)
+	mobile_trait_hint_button = _make_trait_hint_button("힌트")
+	mobile_dialogue_panel.add_child(mobile_trait_hint_button)
+
+func _make_trait_hint_button(caption: String) -> Button:
+	var button := Button.new()
+	button.text = caption
+	button.z_index = 125
+	button.add_theme_font_size_override("font_size", 20)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.07, 0.08, 0.72)
+	style.set_corner_radius_all(4)
+	style.content_margin_left = 4
+	style.content_margin_right = 4
+	style.content_margin_top = 2
+	style.content_margin_bottom = 2
+	style.set_border_width_all(1)
+	style.border_color = Color(0.5, 0.55, 0.58, 0.6)
+	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		button.add_theme_stylebox_override(state, style)
+	button.add_theme_color_override("font_disabled_color", Color(0.5, 0.5, 0.5, 0.5))
+	button.pressed.connect(func():
+		if not active_insight_text.is_empty():
+			trait_hint_popup.open(active_insight_title, active_insight_text)
+	)
+	return button
+
+func _make_bag_button() -> Button:
+	var button := _make_trait_hint_button("")
+	button.icon = preload("res://bag_icon.svg")
+	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	button.tooltip_text = "가방"
+	button.add_theme_constant_override("icon_max_width", 22)
+	for connection in button.pressed.get_connections():
+		button.pressed.disconnect(connection.callable)
+	button.pressed.connect(func():
+		trait_hint_popup.close()
+		inventory_popup.open_bag()
+	)
+	return button
+
+func _acquire_dialogue_item(text: String) -> void:
+	var data = dialogue_box.data
+	if data == null or data.resource_path != "res://hospital_dialogue.tres":
+		return
+	# Resolve the authored node, so edits to its prose don't break acquisition.
+	var node: Dictionary = data.nodes.get(&"1_11", {})
+	if not node.is_empty() and text == str(node.get("dialogue", "")):
+		RoomManager.add_item("hospital_diary")
